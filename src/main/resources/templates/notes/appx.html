@@ -1,0 +1,1205 @@
+<div class="note-body" th:fragment="content" th:inline="none" xmlns:th="http://www.thymeleaf.org">
+<h1 id="a">부록 A. 계산 공식 · 풀이 <span class="badge badge-calc">🧮</span></h1>
+<blockquote>
+<p>계산 문제는 <strong>공식 → 답안 절차 → 풀이 예제</strong>를 한곳에서 보도록 이 부록에 모았다. A-1 ~ A-16 은 유형별 공식과 풀이이고, A-17 은 본문 곳곳의 계산 예제를 찾아가는 색인이다. 풀이는 접혀 있으니 먼저 손으로 풀어 본다.</p>
+</blockquote>
+<h2 id="a-1-cpu">A-1. CPU 스케줄링 (Part 1-4)</h2>
+<pre><code>대기 시간(Waiting Time)   = 시작 시간 - 도착 시간
+반환 시간(Turnaround Time) = 종료 시간 - 도착 시간
+응답 시간(Response Time)   = 최초 CPU 할당 시간 - 도착 시간
+반환 시간 = 대기 시간 + 실행 시간   ← 검산용
+</code></pre>
+<h2 id="a-2">A-2. 은행원 알고리즘 (Part 1-6)</h2>
+<pre><code>Available = 전체 자원 - Σ(각 프로세스의 Allocation)
+Need = Max - Allocation   (문제가 Need를 직접 주면 그대로 사용)
+프로세스 종료 시 반납량 = 원래 Allocation + 그 사이 새로 받은 양
+</code></pre>
+<h2 id="a-3">A-3. 페이지 주소 변환</h2>
+<pre><code>논리 주소 = [ 페이지 번호 p | 오프셋 d ]
+페이지 크기 = 2ⁿ  →  오프셋 d = n비트
+논리 주소 공간 = 2ᵐ  →  페이지 번호 p = (m - n)비트
+페이지 테이블 항목 수 = 2^(m-n)
+물리 주소 = 프레임 번호(f) × 페이지 크기 + 오프셋(d)
+</code></pre>
+<p><strong>답안 3줄</strong>: ① 분할(하위 n비트 = 오프셋 d, 나머지 = 페이지 번호 p) ② 조회(PT[p] = 프레임 f) ③ 결합(물리 주소 = f ‖ d, <strong>비트열 끝까지</strong> 쓰기)</p>
+<div class="calc-ex">
+<p><strong>예제 1 (2진수)</strong> 16비트 논리 주소, 페이지 4KB. 논리 주소 <code>0011 1010 0111 1111</code>, PT[3] = 5일 때 물리 주소는?</p>
+<details>
+<summary>풀이</summary>
+<ul>
+<li>4KB = 2¹² → 오프셋 12비트, 페이지 번호 16 − 12 = 4비트</li>
+<li>p = <code>0011</code> = 3, d = <code>1010 0111 1111</code></li>
+<li>PT[3] = 5 = <code>101</code></li>
+<li>물리 주소 = <code>101</code> ‖ <code>1010 0111 1111</code> = <strong><code>101 1010 0111 1111</code></strong> (= 0x5A7F = 23167)</li>
+</ul>
+</details>
+<p><strong>예제 2 (10진수)</strong> 페이지 1KB, 논리 주소 5000, PT[4] = 7일 때 물리 주소는?</p>
+<details>
+<summary>풀이</summary>
+<ul>
+<li>p = 5000 ÷ 1024 = <strong>4</strong> (몫), d = 5000 − 4 × 1024 = <strong>904</strong> (나머지)</li>
+<li>물리 주소 = 7 × 1024 + 904 = <strong>8072</strong></li>
+</ul>
+</details>
+<p><strong>예제 3 (테이블 크기)</strong> 32비트 주소, 페이지 4KB, 페이지 테이블 항목(PTE) 4바이트일 때 프로세스당 페이지 테이블 크기는?</p>
+<details>
+<summary>풀이</summary>
+<ul>
+<li>페이지 번호 = 32 − 12 = 20비트 → 항목 2²⁰개</li>
+<li>2²⁰ × 4B = <strong>4MB</strong> → 그래서 다단계 페이지 테이블·역페이지 테이블을 쓴다</li>
+</ul>
+</details>
+<p><strong>예제 4 (페이지화된 세그먼테이션)</strong> 논리 주소 = 세그먼트 번호 | 페이지 번호 | 변위. 세그먼트 4, 페이지 2, 변위 11이고 세그먼트 4의 페이지 테이블이 [5, 2, 1, 6]이면?</p>
+<details>
+<summary>풀이</summary>
+<ul>
+<li>세그먼트 번호 = <strong>몇 번째 페이지 테이블을 쓸지</strong> → 세그먼트 4의 테이블 선택</li>
+<li>그 테이블의 2번 항목 = 프레임 <strong>1</strong>, 변위는 그대로 <strong>11</strong></li>
+</ul>
+</details>
+</div>
+<h3 id="paging-bit-translate">비트 단위 주소 변환 풀이 절차 <span class="badge badge-fire">🔥</span> <span class="badge badge-calc">🧮</span></h3>
+<pre><code>문제: 16비트 논리 주소, 페이지 크기 4KB, 페이지 테이블이 주어짐
+
+① 오프셋 비트 수 = log₂(페이지 크기) = log₂(4096) = 12비트
+② 페이지 번호 비트 = 16 - 12 = 4비트  → 페이지 0~15 (테이블 16칸과 일치하는지 검산)
+③ 논리 주소를 [상위 4비트 | 하위 12비트] 로 자른다   (아래는 설명용 임의 값)
+      0111 | 0000 1010 0001
+      p = 0111₂ = 7
+④ 페이지 테이블[7]의 프레임 번호를 읽는다 (예: 테이블에 101이 적혀 있다면)
+⑤ 물리 주소 = [프레임 번호 | 오프셋 그대로]
+      101 | 0000 1010 0001   → 15비트 물리 주소
+</code></pre>
+<blockquote>
+<p>⚠️ <strong>함정</strong>: 오프셋은 <strong>절대 바뀌지 않는다</strong>. 물리 주소의 비트 수 = 프레임 번호 비트 + 오프셋 비트 → <strong>논리 주소와 길이가 다를 수 있다</strong>. 프레임 번호를 3비트로 줬으면 물리 주소는 15비트다.</p>
+</blockquote>
+<h2 id="a-4-5-eat">A-4 vs A-5. TLB 접근시간과 캐시 접근시간은 무엇이 다른가</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>A-4. TLB 유효 접근시간</th>
+<th>A-5. 캐시 평균 접근시간</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>캐시하는 것</td>
+<td><strong>주소 변환 정보</strong>(페이지 테이블 항목)</td>
+<td><strong>데이터</strong> 자체</td>
+</tr>
+<tr>
+<td>미스 시 추가 비용</td>
+<td>페이지 테이블을 읽으러 <strong>메모리 1번 더</strong> → t + <strong>2m</strong></td>
+<td>데이터를 가지러 <strong>메모리</strong> → Tc + Tm</td>
+</tr>
+<tr>
+<td>히트 시</td>
+<td>t + m (변환 후 데이터는 어차피 메모리에서)</td>
+<td>Tc만</td>
+</tr>
+<tr>
+<td>쓰기 정책</td>
+<td>해당 없음</td>
+<td>write-through / write-back에 따라 쓰기 시간이 다름</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p>한 줄: <strong>TLB는 "어디 있는지"를, 캐시는 "무엇인지"를 기억한다.</strong> TLB 히트여도 데이터는 메모리에서 읽는다(캐시가 없다면).</p>
+</blockquote>
+<h3 id="a-4-tlb-eat">A-4. TLB 유효 접근시간(EAT)</h3>
+<pre><code>EAT = h × (t + m) + (1-h) × (t + 2m)
+  h = TLB 히트율, t = TLB 접근시간, m = 메모리 접근시간
+※ TLB 접근시간을 무시하라는 조건이면: EAT = (2 - h) × m
+</code></pre>
+<div class="calc-ex">
+<p><strong>예제</strong> TLB 20ns, 메모리 100ns, TLB 히트율 80%일 때 EAT는? TLB 시간을 무시하면?</p>
+<details>
+<summary>풀이</summary>
+<ul>
+<li>히트: 20 + 100 = 120, 미스: 20 + 100 + 100 = 220</li>
+<li>EAT = 0.8 × 120 + 0.2 × 220 = 96 + 44 = <strong>140ns</strong></li>
+<li>TLB 무시: (2 − 0.8) × 100 = <strong>120ns</strong></li>
+</ul>
+</details>
+</div>
+<h3 id="a-5-eat">A-5. 캐시 평균 접근시간</h3>
+<pre><code>읽기 동작 시간 = Hit비율×캐시시간 + Miss비율×(캐시시간+메모리시간)
+
+[Write-through] 쓰기 동작 시간 = 캐시시간 + 메모리시간   ← 히트율과 무관, 항상 고정!
+[Write-back]     쓰기 동작 시간 = Hit비율×캐시시간 + Miss비율×(캐시시간+메모리시간)
+
+평균 접근시간 = 읽기비율 × 읽기시간 + 쓰기비율 × 쓰기시간
+</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>가정</th>
+<th>읽기 miss</th>
+<th>write-through 쓰기</th>
+<th>예제 평균 (Tc 10, Tm 100, h 0.9, 읽기 80%)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>순차 접근</strong>(캐시 확인 후 메모리)</td>
+<td>Tc + Tm = 110</td>
+<td>Tc + Tm = 110</td>
+<td>0.8 × 20 + 0.2 × 110 = <strong>38ns</strong></td>
+</tr>
+<tr>
+<td>동시 접근(병렬)</td>
+<td>Tm = 100</td>
+<td>Tm = 100</td>
+<td>0.8 × 19 + 0.2 × 100 = 35.2ns</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><span class="badge badge-fire">🔥</span> 읽기와 쓰기에 <strong>같은 가정</strong>을 쓰고, 답안 첫 줄에 가정을 명시한다.</li>
+</ul>
+<h5 id="eat"><span class="badge badge-calc">🧮</span> 평균 접근시간(EAT) 계산</h5>
+<blockquote>
+<p>조건: 주기억장치 접근 100ns, 캐시 접근 10ns, 읽기 80% / 쓰기 20%, 캐시 히트율 90%, <strong>Write-through</strong> 정책</p>
+</blockquote>
+<p><strong>① 읽기 동작 시간</strong></p>
+<pre><code>읽기는 Hit/Miss에 따라 다름:
+  Hit(90%)  : 캐시만 읽으면 됨          → 10ns
+  Miss(10%) : 캐시 확인 + 주기억장치까지 → 10 + 100 = 110ns
+
+읽기 동작 시간 = 0.9 × 10 + 0.1 × 110
+             = 9 + 11 = 20ns
+</code></pre>
+<p><strong>② 쓰기 동작 시간</strong></p>
+<pre><code>Write-through는 Hit이든 Miss든 &quot;항상 주기억장치에도 써야&quot; 한다.
+→ Hit/Miss 여부와 무관하게 항상 캐시(10) + 주기억장치(100)
+
+쓰기 동작 시간 = 10 + 100 = 110ns
+</code></pre>
+<blockquote>
+<p><strong>⚠️ 최대 함정</strong>: 쓰기에서도 히트율(90%)을 곱하는 실수를 매우 많이 한다.
+<strong>Write-through의 정의 자체가 "항상 메모리에 같이 쓴다"이므로, 쓰기는 히트율과 무관하게 캐시+메모리 시간이 고정으로 더해진다.</strong></p>
+</blockquote>
+<p><strong>③ 평균 접근 시간</strong></p>
+<pre><code>평균 접근시간 = (읽기 비율 × 읽기시간) + (쓰기 비율 × 쓰기시간)
+             = 0.8 × 20 + 0.2 × 110
+             = 16 + 22 = 38ns
+</code></pre>
+<p><strong>✅ 답: 읽기 20ns / 쓰기 110ns / 평균 38ns</strong></p>
+<p><strong>Write-back이었다면?</strong> (비교로 함께 알아둘 것)</p>
+<pre><code>쓰기 동작 시간 = Hit(90%): 캐시만(10ns) + Miss(10%): 캐시확보 위해 read 필요(10+100=110ns)
+             = 0.9×10 + 0.1×110 = 9+11 = 20ns   ← write-through(110ns)보다 훨씬 빠름
+</code></pre>
+<p>이것이 Write-back이 "쓰기 속도가 빠르다"고 서술하는 근거의 실제 계산이다.</p>
+<h2 id="a-6">A-6. 서브네팅</h2>
+<pre><code>사용 가능 호스트 수 = 2^(호스트 비트 수) - 2   ← 네트워크 주소, 브로드캐스트 주소 제외
+서브넷 개수 = 2^(빌려온 비트 수)
+</code></pre>
+<div class="calc-ex">
+<p><strong>예제 1 (같은 크기로 나누기)</strong> 192.168.10.0/24를 4개의 같은 서브넷으로 나누면?</p>
+<details>
+<summary>풀이</summary>
+<ul>
+<li>4 = 2² → 2비트 빌림 → <strong>/26</strong>, 마스크 255.255.255.<strong>192</strong>, 블록 64</li>
+<li>.0~.63 / .64~.127 / .128~.191 / .192~.255, 각 사용 가능 호스트 <strong>62</strong></li>
+</ul>
+</details>
+<p><strong>예제 2 (주소가 속한 서브넷 찾기)</strong> 200.1.1.77/27의 네트워크 주소, 브로드캐스트 주소, 사용 범위는?</p>
+<details>
+<summary>풀이</summary>
+<ul>
+<li>/27 → 블록 32 → 0, 32, <strong>64</strong>, 96 … → 77은 64~95</li>
+<li>네트워크 <strong>200.1.1.64</strong>, 브로드캐스트 <strong>200.1.1.95</strong>, 호스트 .65 ~ .94 (30개)</li>
+<li>검산: 77 AND 224 = 0100 1101 AND 1110 0000 = 0100 0000 = 64</li>
+</ul>
+</details>
+<p><strong>예제 3 (VLSM)</strong> 210.11.21.0/24에서 호스트 100, 50, 10개 서브넷을 효율적으로 만들면?</p>
+<details>
+<summary>풀이</summary>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>요구</th>
+<th>블록</th>
+<th>접두사</th>
+<th>마스크</th>
+<th>네트워크 주소</th>
+<th>사용 가능</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>100</td>
+<td>128</td>
+<td>/25</td>
+<td>.128</td>
+<td>210.11.21.0</td>
+<td>126</td>
+</tr>
+<tr>
+<td>50</td>
+<td>64</td>
+<td>/26</td>
+<td>.192</td>
+<td>210.11.21.128</td>
+<td>62</td>
+</tr>
+<tr>
+<td>10</td>
+<td>16</td>
+<td>/28</td>
+<td>.240</td>
+<td>210.11.21.192</td>
+<td>14</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>큰 블록부터</strong> 배정. 10개짜리를 /27(32)로 잡으면 "효율적"이 아님.</li>
+</ul>
+</details>
+</div>
+<h3 id="_14"><span class="badge badge-calc">🧮</span> 서브네팅 계산</h3>
+<pre><code>/24 = 255.255.255.0 → 호스트 비트 8개 → 2^8 = 256개
+사용 가능 호스트 수 = 2^(호스트 비트) - 2
+                     (-2: 네트워크 주소, 브로드캐스트 주소 제외)
+
+예) 192.168.1.0/26
+   → 호스트 비트 = 32 - 26 = 6
+   → 서브넷당 주소 256/4 = 64개, 사용 가능 호스트 = 2^6 - 2 = 62개
+   → 서브넷: .0~.63 / .64~.127 / .128~.191 / .192~.255
+   → 첫 서브넷의 네트워크 주소 = .0, 브로드캐스트 = .63, 사용 범위 = .1 ~ .62
+</code></pre>
+<p><strong>⚠️ 함정</strong>: <strong>-2 하는 것을 잊지 말 것.</strong> 그리고 서브넷 개수는 <code>2^(빌린 비트 수)</code>다.</p>
+<h3 id="vlsm">VLSM (가변 길이 서브넷 마스크) 할당 <span class="badge badge-calc">🧮</span></h3>
+<pre><code>공식: (필요 호스트 수 + 2) ≤ 2^h   → 호스트 비트 h, 마스크 = /(32 - h)
+      +2 = 네트워크 주소 + 브로드캐스트 주소
+
+절차: ① 요구가 큰 서브넷부터 정렬 ② 블록 크기 2^h 를 앞에서부터 연속 배치
+      ③ 각 블록: 첫 주소(네트워크 주소) / 사용 가능 호스트 = 2^h - 2
+
+예) (설명용) 192.168.10.0/24 를 60 · 25 · 5 호스트로
+   60 →  62 ≤  64 → h=6 → /26 (255.255.255.192) → 192.168.10.0   , 호스트 62개
+   25 →  27 ≤  32 → h=5 → /27 (255.255.255.224) → 192.168.10.64  , 호스트 30개
+    5 →   7 ≤   8 → h=3 → /29 (255.255.255.248) → 192.168.10.96  , 호스트 6개
+   (210.11.21.0/24 · 100/50/10 은 같은 절차로 직접 풀어볼 것)
+</code></pre>
+<blockquote>
+<p>⚠️ <strong>함정</strong>: "첫 번째 IP주소"가 <strong>네트워크 주소</strong>를 뜻하는지 <strong>첫 사용 가능 호스트 주소(+1)</strong>를 뜻하는지 답안에 명시한다. 둘 다 써 두면 안전하다.</p>
+</blockquote>
+<h2 id="a-7-tcp-seq-ack">A-7. TCP 순서 번호(SEQ) / 확인 번호(ACK)</h2>
+<pre><code>ACK 번호 = 상대방이 보낸 SEQ 번호 + 수신한 데이터 크기
+         = &quot;다음에 받기를 기대하는 바이트 번호&quot;
+</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>규칙</th>
+<th>내용</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>각 호스트는 <strong>자기만의 번호 공간</strong></td>
+<td>A의 번호와 B의 번호는 무관</td>
+</tr>
+<tr>
+<td>시작 번호(ISN)</td>
+<td>🎲 <strong>무작위</strong> — 번호 예측 공격(IP 스푸핑) 방지, 이전 연결의 지연 패킷과 혼동 방지</td>
+</tr>
+<tr>
+<td>ACK</td>
+<td>📏 상대가 보낸 SEQ + 상대가 보낸 길이 = "다음에 받을 바이트 번호"</td>
+</tr>
+<tr>
+<td>번호 소비</td>
+<td>SYN·FIN = <strong>1</strong>, 데이터 = <strong>바이트 수</strong>, 순수 ACK = <strong>0</strong></td>
+</tr>
+</tbody>
+</table></div>
+<div class="calc-ex">
+<p><strong>예제 1</strong> A의 ISN 100, B의 ISN 300, 연결 후 A가 4바이트, B가 4바이트를 보내면 각 세그먼트의 SEQ·ACK는?</p>
+<details>
+<summary>풀이</summary>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>단계</th>
+<th>방향</th>
+<th>내용</th>
+<th>SEQ</th>
+<th>ACK</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>①</td>
+<td>A → B</td>
+<td>SYN</td>
+<td>100 🎲</td>
+<td>—</td>
+</tr>
+<tr>
+<td>②</td>
+<td>B → A</td>
+<td>SYN+ACK</td>
+<td>300 🎲</td>
+<td>101</td>
+</tr>
+<tr>
+<td>③</td>
+<td>A → B</td>
+<td>ACK</td>
+<td>101</td>
+<td>301</td>
+</tr>
+<tr>
+<td>④</td>
+<td>A → B</td>
+<td>데이터 4B</td>
+<td>101 (③은 0 소비)</td>
+<td>301</td>
+</tr>
+<tr>
+<td>⑤</td>
+<td>B → A</td>
+<td>데이터 4B</td>
+<td>301</td>
+<td>105</td>
+</tr>
+<tr>
+<td>⑥</td>
+<td>A → B</td>
+<td>ACK</td>
+<td>105</td>
+<td>305</td>
+</tr>
+</tbody>
+</table></div>
+</details>
+</div>
+<h3 id="appx-n1"><span class="badge badge-calc">🧮</span> 빈칸 채우기</h3>
+<blockquote>
+<p>문제: A → B <code>SYN=23, data='C'</code>  /  B → A <code>[?]=[?], [?]=[?], data='C'</code>  /  A → B <code>ACK=21</code>
+('C'는 1Byte)</p>
+</blockquote>
+<p><strong>풀이 원리</strong></p>
+<pre><code>ACK 번호 = 상대방으로부터 받은 SEQ + 받은 데이터 크기(1Byte)
+</code></pre>
+<p><strong>역산으로 B의 SYN 값 구하기</strong></p>
+<pre><code>마지막에 A가 보낸 ACK = 21
+21 = (B의 SYN 값) + 1
+→ B의 SYN = 20
+</code></pre>
+<p><strong>B가 보낼 ACK 값 구하기</strong></p>
+<pre><code>A로부터 SYN=23, data 1Byte 수신
+→ ACK = 23 + 1 = 24
+</code></pre>
+<p><strong>✅ 답: <code>SYN = 20</code>, <code>ACK = 24</code></strong></p>
+<blockquote>
+<p>검증: A의 최종 ACK가 <code>20 + 1 = 21</code>로 문제에 주어진 값과 일치 ✓
+<strong>답안 작성 팁</strong>: "ACK 번호는 상대의 시퀀스 번호에 수신한 크기를 더한 값, 즉 <strong>다음에 받기를 기대하는 바이트 번호</strong>"라는 원리를 함께 서술할 것.</p>
+</blockquote>
+<ul>
+<li>그림에 데이터와 함께 "SYN=23"처럼 적혀 있으면 SYN 플래그가 아니라 <strong>순서 번호(Seq)</strong>를 뜻하는 출제 표기로 보고, 답안에 가정을 한 줄 쓴다.</li>
+</ul>
+<h2 id="a-8">A-8. 시간복잡도 증가 순서 (Part 5-1)</h2>
+<pre><code>O(1) &lt; O(log n) &lt; O(n) &lt; O(n log n) &lt; O(n²) &lt; O(n³) &lt; O(2ⁿ) &lt; O(n!)
+
+Quick Sort : 평균 O(n log n)  /  최악 O(n²)  (피벗이 항상 최댓값·최솟값일 때)
+Merge Sort : 최선=평균=최악 모두 O(n log n)  (항상 절반씩 균등 분할)
+</code></pre>
+<h2 id="a-9">A-9. 해시 탐사 공식 (Part 5-3)</h2>
+<pre><code>선형 탐사(Linear Probing)   : (h(k) + i)  % m
+제곱 탐사(Quadratic Probing) : (h(k) + i²) % m
+</code></pre>
+<h2 id="a-10">A-10. 그래프 알고리즘 시간복잡도 (Part 5-4)</h2>
+<pre><code>Prim           : O(E log V)   (우선순위 큐 사용 시), 조밀 그래프에 유리
+Kruskal        : O(E log E)   (정렬이 지배적), 희소 그래프에 유리
+Dijkstra       : O(E log V)   (우선순위 큐 사용 시), 음수 가중치 불가
+Bellman-Ford   : O(V × E)     음수 가중치 허용, 음수 사이클 탐지 가능
+Floyd-Warshall : O(V³)        모든 정점 쌍 최단경로, 음수 가중치 허용(음수 사이클 불가)
+</code></pre>
+<h2 id="a-11-gcdlcm">A-11. 순열 · 조합 · GCD/LCM (Part 5-6)</h2>
+<pre><code>순열 nPr = n! / (n-r)!
+조합 nCr = n! / (r! × (n-r)!)
+유클리드 호제법: gcd(a,b) = gcd(b, a % b)      시간복잡도 O(log(min(a,b)))
+lcm(a,b) = a × b / gcd(a,b)
+</code></pre>
+<h2 id="a-12-complement">A-12. 정수 표현 · 보수</h2>
+<pre><code>1의 보수 = (2ⁿ − 1) − x   (모든 비트 반전)
+2의 보수 = 2ⁿ − x         (반전 + 1)
+n비트 2의 보수 범위 = −2ⁿ⁻¹ ~ 2ⁿ⁻¹ − 1
+unsigned 오버플로 = MSB 밖으로 carry
+signed 오버플로   = 부호 같은 두 수의 합의 부호가 다름
+</code></pre>
+<div class="calc-ex">
+<p><strong>예제 1 (표현법)</strong> 8비트로 −5를 부호-크기, 1의 보수, 2의 보수로 나타내면? 각 표현의 범위는?</p>
+<details>
+<summary>풀이</summary>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>표현</th>
+<th>−5</th>
+<th>범위 (8비트)</th>
+<th>0의 표현</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>부호-크기</td>
+<td>1000 0101</td>
+<td>−127 ~ +127</td>
+<td>+0, −0 두 개</td>
+</tr>
+<tr>
+<td>1의 보수</td>
+<td>1111 1010 (전부 반전)</td>
+<td>−127 ~ +127</td>
+<td>+0, −0 두 개</td>
+</tr>
+<tr>
+<td>2의 보수</td>
+<td>1111 1011 (반전 + 1)</td>
+<td><strong>−128 ~ +127</strong></td>
+<td>하나</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>2의 보수 → 10진: 1111 1011 = −128 + 64 + 32 + 16 + 8 + 2 + 1 = <strong>−5</strong> (MSB 자리값을 음수로)</li>
+</ul>
+</details>
+<p><strong>예제 2 (오버플로)</strong> 8비트 <code>0110 0100</code>(100) + <code>0101 0000</code>(80)은?</p>
+<details>
+<summary>풀이</summary>
+<ul>
+<li>합 = <code>1011 0100</code>, 자리올림(Carry) 없음</li>
+<li>unsigned로 보면 180 → 정상</li>
+<li>signed(2의 보수)로 보면 양수 + 양수인데 부호 비트가 1 → <strong>−76, 오버플로</strong></li>
+</ul>
+</details>
+<p><strong>예제 3 (Carry ≠ Overflow)</strong> 8비트 <code>1111 0000</code>(−16) + <code>0001 0001</code>(17)은?</p>
+<details>
+<summary>풀이</summary>
+<ul>
+<li>합 = <code>1 0000 0001</code> → Carry 1 발생, 8비트 결과 <code>0000 0001</code></li>
+<li>unsigned: 240 + 17 = 257 → <strong>unsigned 오버플로</strong>(Carry로 판단)</li>
+<li>signed: −16 + 17 = <strong>1 → 오버플로 아님</strong> (부호가 다른 두 수의 합은 오버플로가 없다)</li>
+</ul>
+</details>
+<p><strong>예제 4 (unsigned 언더플로)</strong> C에서 <code>unsigned char x = 0; x = x - 1;</code> 이후 x는?</p>
+<details>
+<summary>풀이</summary>
+<ul>
+<li>0 − 1 → 2⁸ − 1 = <strong>255</strong> (모듈로 2⁸로 감김, Wrap-around)</li>
+<li><code>for (unsigned i = n; i &gt;= 0; i--)</code>는 i가 음수가 될 수 없어 <strong>무한 루프</strong></li>
+</ul>
+</details>
+</div>
+<h2 id="a-13-vlsm-delay">A-13. VLSM · 네트워크 지연 (Part 2-11)</h2>
+<pre><code>(필요 호스트 + 2) ≤ 2^h  →  마스크 /(32 − h),  사용 가능 호스트 = 2^h − 2
+블록 크기 = 256 − (해당 옥텟 마스크 값)
+전송 지연 = L / R        (패킷 길이 / 전송률)
+전파 지연 = d / s        (거리 / 전파 속도)
+노드 지연 = 처리 + 큐잉 + 전송 + 전파
+</code></pre>
+<h2 id="a-14-cdma">A-14. CDMA 복호화 (Part 2-13)</h2>
+<pre><code>비트 0 → −1, 1 → +1, idle → 0
+채널 신호 = Σ dᵢ · cᵢ  (칩별 합)
+복호화 dₖ = (채널 신호 · cₖ) / m      m = 칩 수
+</code></pre>
+<h2 id="a-15-cpm-fp">A-15. 임계경로 · 기능점수 (Part 7-7)</h2>
+<pre><code>ES = max(선행 EF),  EF = ES + 소요
+LF = min(후행 LS),  LS = LF − 소요
+Slack = LS − ES   (0인 작업 = 임계경로)
+FP(간이법) = Σ (유형별 개수 × 평균 가중치)   EI는 입력·수정·삭제 각각 1개
+</code></pre>
+<h2 id="a-16-ml-metrics">A-16. 분류 성능 지표 · K-NN 거리 (Part 9)</h2>
+<pre><code>정확도 = (TP + TN) / 전체
+정밀도 = TP / (TP + FP)
+재현율 = TP / (TP + FN)
+F1     = 2PR / (P + R)
+유클리드 d = √((x2 − x1)² + (y2 − y1)²)
+경사하강 W ← W − η · ∂Loss/∂W
+ReLU f(x) = max(0, x)
+</code></pre>
+<h2 id="a-17-more">A-17. 본문 계산 예제 찾아보기 <span class="badge badge-calc">🧮</span></h2>
+<div class="table-wrap"><table>
+<thead><tr><th>과목</th><th>주제</th><th>공식 · 요령</th></tr></thead>
+<tbody>
+<tr><td>운영체제</td><td><a href="#disk-scheduling">디스크 스케줄링</a></td><td>총 이동 거리 = 헤드가 지난 구간 길이의 합. SCAN 은 <strong>끝까지</strong>, LOOK 은 <strong>마지막 요청까지</strong></td></tr>
+<tr><td>운영체제</td><td><a href="#inode">inode 최대 파일 크기</a></td><td>n = 블록 크기 / 주소 크기. (직접 포인터 수 + n + n² + n³) × 블록 크기</td></tr>
+<tr><td>네트워크</td><td><a href="#error-detection">CRC</a></td><td>데이터 뒤에 (생성 다항식 비트 수 − 1)개의 0 을 붙여 모듈로-2 나눗셈, <strong>나머지</strong>를 붙여 전송</td></tr>
+<tr><td>네트워크</td><td><a href="#arq">ARQ 윈도 크기</a></td><td>Go-Back-N ≤ 2ⁿ − 1, Selective Repeat ≤ 2ⁿ⁻¹</td></tr>
+<tr><td>컴퓨터구조</td><td><a href="#karnaugh">카르노 맵</a></td><td>인접한 1 을 2의 거듭제곱 개로 가능한 한 크게 묶고, 변하지 않는 변수만 남긴다</td></tr>
+<tr><td>컴퓨터구조</td><td><a href="#addressing-modes">유효 주소</a></td><td>직접 = 주소 필드, 간접 = M[주소 필드], 상대 = PC + 변위, 인덱스 = 인덱스 레지스터 + 변위</td></tr>
+<tr><td>컴퓨터구조</td><td><a href="#cpu-time">CPU 시간</a></td><td>명령어 수 × CPI / 클록 주파수. MIPS = 클록 주파수 / (CPI × 10⁶)</td></tr>
+<tr><td>컴퓨터구조</td><td><a href="#amdahl">암달의 법칙</a></td><td>1 / ((1 − P) + P / S). 상한은 1 / (1 − P)</td></tr>
+<tr><td>컴퓨터구조</td><td><a href="#ieee754">IEEE 754</a></td><td>부호 1 + 지수 8(값 + 127) + 가수 23(정규화한 수의 소수 부분)</td></tr>
+<tr><td>알고리즘</td><td><a href="#master-theorem">마스터 정리</a></td><td>T(n) = aT(n/b) + f(n) 에서 n^(log_b a) 와 f(n) 의 크기 비교</td></tr>
+<tr><td>알고리즘</td><td><a href="#kmp">KMP 실패 함수</a></td><td>접두사이면서 접미사인 가장 긴 길이</td></tr>
+<tr><td>자료구조</td><td><a href="#postfix">후위 표기</a></td><td>변환은 연산자 스택, 계산은 피연산자 스택. 먼저 꺼낸 값이 오른쪽 피연산자</td></tr>
+<tr><td>자료구조</td><td><a href="#circular-queue">원형 큐</a></td><td>공백 front == rear, 포화 (rear + 1) % N == front, 최대 N − 1 개</td></tr>
+<tr><td>자료구조</td><td><a href="#heap-array">힙 인덱스</a></td><td>0 부터일 때 부모 (i − 1) / 2, 자식 2i + 1 · 2i + 2</td></tr>
+<tr><td>자료구조</td><td><a href="#b-tree-bplus">B+ 트리 용량</a></td><td>대략 (노드당 분기 수)^높이</td></tr>
+<tr><td>SW공학</td><td><a href="#coverage-types">커버리지</a></td><td>조건 n 개의 MC/DC 최소 케이스는 n + 1 개, 다중 조건은 2ⁿ 개</td></tr>
+<tr><td>SW공학</td><td><a href="#pert">3점 추정</a></td><td>(낙관 + 4 × 최빈 + 비관) / 6, 표준 편차 (비관 − 낙관) / 6</td></tr>
+<tr><td>SW공학</td><td><a href="#estimation">COCOMO</a></td><td>노력 = a × (KLOC)^b</td></tr>
+<tr><td>데이터베이스</td><td><a href="#8-7-relational-algebra">관계 대수</a></td><td>카티션 곱의 차수는 <strong>합</strong>, 카디널리티는 <strong>곱</strong></td></tr>
+<tr><td>인공지능</td><td><a href="#decision-tree">엔트로피 · 지니</a></td><td>H = −Σ p log₂ p, G = 1 − Σ p²</td></tr>
+<tr><td>인공지능</td><td><a href="#cnn">CNN 출력 크기</a></td><td>(입력 − 필터 + 2 × 패딩) / 스트라이드 + 1. 파라미터 = (필터 높이 × 너비 × 입력 채널 + 1) × 필터 수</td></tr>
+<tr><td>프로그래밍</td><td><a href="#struct-padding">구조체 패딩</a></td><td>멤버는 자기 크기의 배수 위치에서 시작, 전체는 가장 큰 멤버 크기의 배수</td></tr>
+<tr><td>클라우드 · DevOps</td><td><a href="#linux-permission">권한 · umask</a></td><td>r=4, w=2, x=1. 새 파일 = 666 에서, 디렉터리 = 777 에서 umask 비트를 제거</td></tr>
+<tr><td>클라우드 · DevOps</td><td><a href="#availability">가용성</a></td><td>직렬은 곱, 병렬은 1 − (1 − A)ⁿ. 가용성 = MTBF / (MTBF + MTTR)</td></tr>
+<tr><td>시스템 설계</td><td><a href="#13-2-estimation">규모 추정</a></td><td>QPS ≈ 일간 요청 수 / 10⁵. 저장 용량 = 건수 × 크기 × 기간 × 복제 수</td></tr>
+<tr><td>시스템 설계</td><td><a href="#quorum">정족수</a></td><td>W + R &gt; N 이면 읽기와 쓰기가 반드시 겹친다</td></tr>
+</tbody></table></div>
+<hr />
+<h1 id="b">부록 B. 비교표 인덱스 <span class="badge badge-star">⭐</span></h1>
+<blockquote>
+<p>"A vs B" 는 필기 서술형과 기술 면접 모두에서 가장 자주 나오는 질문 형태다. 본문의 비교 주제를 <strong>과목별로</strong> 묶었다. 제목만 보고 표를 손으로 다시 그릴 수 있는지 확인한다.</p>
+</blockquote>
+<h3 id="b-os">운영체제</h3>
+<ul class="vs-index">
+  <li><a href="#1-1-process-vs-thread">1-1. Process vs Thread <span class="badge badge-fire">🔥</span></a></li>
+  <li><a href="#process-vs-thread">비교표: Process vs Thread</a></li>
+  <li><a href="#vs">멀티프로세스 vs 멀티스레드 <span class="badge badge-star">⭐</span></a></li>
+  <li><a href="#os-n1">선점형 vs 비선점형 <span class="badge badge-fire">🔥</span></a></li>
+  <li><a href="#os-n3">스핀락 vs 뮤텍스 시나리오 판단</a></li>
+  <li><a href="#paging-vs-segmentation">비교표: Paging vs Segmentation</a></li>
+  <li><a href="#1-10-virtualization">하이퍼바이저 vs 컨테이너</a></li>
+  <li><a href="#concurrency-vs-parallelism">동시성 vs 병렬성</a></li>
+  <li><a href="#user-vs-kernel-thread">사용자 수준 스레드 vs 커널 수준 스레드</a></li>
+  <li><a href="#hard-vs-symlink">하드 링크 vs 심볼릭 링크</a></li>
+  <li><a href="#zombie-orphan">좀비 프로세스 vs 고아 프로세스</a></li>
+  <li><a href="#mutex-vs-semaphore-vs-spinlock">비교표: Mutex vs Semaphore vs Spinlock</a></li>
+</ul>
+<h3 id="b-net">네트워크</h3>
+<ul class="vs-index">
+  <li><a href="#2-2-tcp-vs-udp">2-2. TCP vs UDP <span class="badge badge-fire">🔥</span></a></li>
+  <li><a href="#2-4-vs">2-4. 흐름 제어 vs 혼잡 제어 <span class="badge badge-fire">🔥</span></a></li>
+  <li><a href="#arp-vs-rarp">ARP vs RARP 비교</a></li>
+  <li><a href="#vs-l2">허브 vs L2 스위치</a></li>
+  <li><a href="#l2-vs">L2 스위치 vs 라우터</a></li>
+  <li><a href="#net-n5">재귀적 질의 vs 반복적 질의 (흐름도)</a></li>
+  <li><a href="#http-vs-https">HTTP vs HTTPS</a></li>
+  <li><a href="#vs_1">대칭키 vs 비대칭키(공개키)</a></li>
+  <li><a href="#tcp-udp-service">서비스별 TCP/UDP 선택</a></li>
+  <li><a href="#static-vs-dynamic-routing">정적 vs 동적 라우팅</a></li>
+  <li><a href="#2-12-ipv6-transition">이중 스택 vs 터널링 vs 헤더 변환 / IPv4 vs IPv6</a></li>
+  <li><a href="#2-13-cdma">FDMA vs TDMA vs CDMA</a></li>
+  <li><a href="#http-versions">HTTP/1.1 vs HTTP/2 vs HTTP/3</a></li>
+  <li><a href="#cookie-vs-session">쿠키 vs 세션</a></li>
+  <li><a href="#l4-vs-l7">L4 vs L7 로드 밸런서</a></li>
+  <li><a href="#forward-vs-reverse-proxy">포워드 프록시 vs 리버스 프록시</a></li>
+  <li><a href="#select-poll-epoll">select vs poll vs epoll</a></li>
+  <li><a href="#dv-vs-ls">거리 벡터 vs 링크 상태 <span class="badge badge-fire">🔥</span></a></li>
+  <li><a href="#network-delay">전송 지연 vs 전파 지연</a></li>
+</ul>
+<h3 id="b-sec">정보보안</h3>
+<ul class="vs-index">
+  <li><a href="#dos-vs-ddos">DoS vs DDoS</a></li>
+  <li><a href="#xss-vs-csrf">XSS vs CSRF</a></li>
+  <li><a href="#ping-of-death">Ping of Death vs ICMP Flooding vs SYN Flooding</a></li>
+  <li><a href="#drdos">DoS vs DDoS vs DRDoS</a></li>
+  <li><a href="#ftp-security">FTPS vs SFTP / 능동 vs 수동 모드</a></li>
+  <li><a href="#sym-vs-asym">대칭키 vs 공개키</a></li>
+  <li><a href="#xss-csrf-ssrf">XSS vs CSRF vs SSRF</a></li>
+  <li><a href="#access-control-models">DAC vs MAC vs RBAC vs ABAC</a></li>
+  <li><a href="#fw-ids-ips-waf">방화벽 vs IDS vs IPS vs WAF</a></li>
+</ul>
+<h3 id="b-arch">컴퓨터구조</h3>
+<ul class="vs-index">
+  <li><a href="#risc-vs-cisc">RISC vs CISC (어셈블리 코드로 판단)</a></li>
+  <li><a href="#write-policy-write-through-vs-write-back">Write Policy — Write-through vs Write-back</a></li>
+  <li><a href="#vs_2">고정소수점 vs 부동소수점</a></li>
+  <li><a href="#vs_3">패리티 비트 vs 해밍 코드</a></li>
+  <li><a href="#raid-4-vs-raid-5">RAID 5 vs RAID 6 그림 판별</a></li>
+  <li><a href="#slc-vs-mlc-vs-tlc">SLC vs MLC vs TLC <span class="badge badge-fire">🔥</span></a></li>
+  <li><a href="#4-7-cpu-vs-gpu">4-7. CPU vs GPU 구조 <span class="badge badge-star">⭐</span></a></li>
+  <li><a href="#carry-vs-overflow">Carry vs Overflow (unsigned vs signed)</a></li>
+  <li><a href="#int-representation">부호-크기 vs 1의 보수 vs 2의 보수</a></li>
+  <li><a href="#comb-vs-seq">조합 논리회로 vs 순차 논리회로</a></li>
+  <li><a href="#endian">빅 엔디안 vs 리틀 엔디안</a></li>
+</ul>
+<h3 id="b-algo">알고리즘</h3>
+<ul class="vs-index">
+  <li><a href="#_19">주요 정렬 알고리즘 비교</a></li>
+  <li><a href="#algo-n1">Quick Sort vs Merge Sort, 평균은 같은데 최악이 다른 이유</a></li>
+  <li><a href="#quick-sort-vs-merge-sort">Quick Sort vs Merge Sort 추가 비교</a></li>
+  <li><a href="#dfs-vs-bfs">DFS vs BFS <span class="badge badge-star">⭐</span></a></li>
+  <li><a href="#prim-vs-kruskal">Prim vs Kruskal 비교</a></li>
+  <li><a href="#vs-dp">이항계수: 재귀 vs DP 시간복잡도</a></li>
+  <li><a href="#b-tree-insert">B-Tree vs B+Tree</a></li>
+  <li><a href="#dc-vs-dp">분할 정복 vs 동적 계획법</a></li>
+</ul>
+<h3 id="b-ds">자료구조</h3>
+<ul class="vs-index">
+  <li><a href="#6-1-array-list">배열 vs 연결 리스트</a></li>
+  <li><a href="#hash-vs-tree">해시 테이블 vs 균형 트리</a></li>
+  <li><a href="#b-tree-bplus">B 트리 vs B+ 트리</a></li>
+</ul>
+<h3 id="b-sw">소프트웨어공학</h3>
+<ul class="vs-index">
+  <li><a href="#waterfall-vs-agile">Waterfall vs Agile</a></li>
+  <li><a href="#vs_4">블랙박스 테스트 vs 화이트박스 테스트</a></li>
+  <li><a href="#alpha-vs-beta">Alpha 테스트 vs Beta 테스트</a></li>
+  <li><a href="#vs_5">오버로딩 vs 오버라이딩</a></li>
+  <li><a href="#vs_6">클래스 vs 객체</a></li>
+  <li><a href="#sw-n2">Java String == 비교</a></li>
+  <li><a href="#coupling-cohesion">결합도 vs 응집도 <span class="badge badge-fire">🔥</span></a></li>
+  <li><a href="#git-vs-svn">Git vs SVN</a></li>
+  <li><a href="#monolith-vs-msa">모놀리식 vs 마이크로서비스</a></li>
+  <li><a href="#scrum-vs-kanban">스크럼 vs 칸반</a></li>
+</ul>
+<h3 id="b-db">데이터베이스</h3>
+<ul class="vs-index">
+  <li><a href="#recovery-redo-vs-undo">Recovery — Redo vs Undo</a></li>
+  <li><a href="#os-vs-db-sync">OS 동기화 vs DB 동시성 제어</a></li>
+  <li><a href="#db-deadlock-prevention">Wait-Die vs Wound-Wait</a></li>
+  <li><a href="#sql-group-by">WHERE vs HAVING</a></li>
+  <li><a href="#sql-ddl-view">DELETE vs TRUNCATE vs DROP</a></li>
+  <li><a href="#clustered-vs-nonclustered">클러스터형 vs 비클러스터형 인덱스</a></li>
+  <li><a href="#optimistic-vs-pessimistic">낙관적 락 vs 비관적 락</a></li>
+  <li><a href="#rdbms-vs-nosql">RDBMS vs NoSQL</a></li>
+  <li><a href="#oltp-vs-olap">OLTP vs OLAP</a></li>
+</ul>
+<h3 id="b-ai">인공지능</h3>
+<ul class="vs-index">
+  <li><a href="#9-1-learning-types">지도 학습 vs 비지도 학습 <span class="badge badge-fire">🔥</span></a></li>
+  <li><a href="#overfitting">과적합 vs 과소적합</a></li>
+  <li><a href="#pretraining-finetuning">사전학습 vs 미세조정</a></li>
+  <li><a href="#bagging-vs-boosting">배깅 vs 부스팅</a></li>
+  <li><a href="#rnn-vs-transformer">RNN vs Transformer</a></li>
+  <li><a href="#rag-vs-finetuning">RAG vs 파인튜닝</a></li>
+</ul>
+<h3 id="b-prog">프로그래밍 언어</h3>
+<ul class="vs-index">
+  <li><a href="#10-2-python-collections">Python list vs tuple vs set</a></li>
+  <li><a href="#compiler-vs-interpreter">컴파일러 vs 인터프리터 vs JIT</a></li>
+  <li><a href="#stack-vs-heap">스택 vs 힙</a></li>
+  <li><a href="#abstract-vs-interface">추상 클래스 vs 인터페이스</a></li>
+</ul>
+<h3 id="b-web">웹 · 백엔드</h3>
+<ul class="vs-index">
+  <li><a href="#json-vs-xml">JSON vs XML <span class="badge badge-fire">🔥</span></a></li>
+  <li><a href="#web-server-vs-was">웹 서버 vs WAS</a></li>
+  <li><a href="#csr-vs-ssr">CSR vs SSR</a></li>
+  <li><a href="#rest-graphql-grpc">REST vs GraphQL vs gRPC</a></li>
+  <li><a href="#session-vs-token">세션 vs 토큰(JWT)</a></li>
+  <li><a href="#filter-interceptor-aop">필터 vs 인터셉터 vs AOP</a></li>
+</ul>
+<h3 id="b-infra">클라우드 · DevOps</h3>
+<ul class="vs-index">
+  <li><a href="#cloud-models">IaaS vs PaaS vs SaaS / 클라우드 vs 온프레미스</a></li>
+  <li><a href="#merge-vs-rebase">merge vs rebase</a></li>
+  <li><a href="#deploy-strategy">롤링 vs 블루-그린 vs 카나리</a></li>
+  <li><a href="#cloud-vs-onprem">클라우드 vs 온프레미스</a></li>
+</ul>
+<h3 id="b-design">시스템 설계</h3>
+<ul class="vs-index">
+  <li><a href="#scale-up-vs-out">수직 확장 vs 수평 확장</a></li>
+  <li><a href="#queue-vs-pubsub">메시지 큐 vs 발행-구독</a></li>
+  <li><a href="#2pc">2단계 커밋 vs 사가</a></li>
+</ul>
+<hr />
+<h1 id="c">부록 C. 답안 작성법 · 약점 지도</h1>
+<blockquote>
+<p>문제를 직접 풀고 채점받으며 드러난 <strong>감점 포인트와 약점</strong>을 모은 곳이다. 시험 직전에는 요약 페이지와 이 부록을 함께 본다.
+각 줄의 링크를 누르면 해당 개념으로 이동하고, <strong>← 돌아가기</strong>로 다시 돌아온다.</p>
+</blockquote>
+<h2 id="c-1-answer-frame">C-1. 서술형 답안 골격 <span class="badge badge-fire">🔥</span> <span class="badge badge-pencil">✍️</span></h2>
+<h3 id="n4-14">기본 골격: 정의 → 원인 → 해결/비교</h3>
+<p>"~에 대해 기술/설명/정의하시오"는 <strong>항상 이 3단</strong>으로 쓴다.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>단계</th>
+<th>쓸 내용</th>
+<th>예: SYN Flooding</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>정의</strong></td>
+<td>한 문장 정의 + 핵심 용어 영문 병기</td>
+<td>위조 SYN을 대량으로 보내 서버의 <strong>백로그 큐</strong>를 고갈시키는 DoS 공격</td>
+</tr>
+<tr>
+<td><strong>원인</strong></td>
+<td>왜 생기는가 / 왜 필요한가 / 어떻게 동작하는가</td>
+<td>서버는 SYN마다 반개방 연결을 저장하고 ACK를 기다리는데, 출발지가 위조라 ACK가 오지 않음</td>
+</tr>
+<tr>
+<td><strong>해결/비교</strong></td>
+<td>문제 현상이면 해결책 2~4개, 개념이면 비교표</td>
+<td>SYN 쿠키, 타임아웃 단축, 백로그 확대, 방화벽 임계치</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="n4-15">감점을 막는 5가지 습관</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>습관</th>
+<th>실제로 감점된 사례</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>문제에 주어진 데이터 형식부터 확인</strong></td>
+<td>지급일자가 <code>'YYYYMMDD'</code> 문자열인데 <code>'2023-08-21'</code>·<code>TO_CHAR</code>를 씀 (2년 연속)</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>모호하면 가정을 한 줄 쓰고 답한다</strong></td>
+<td>TCP 그림의 "SYN=23"(사실은 Seq), VLSM "첫 번째 주소", 캐시 miss 시간</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>최종 결과값을 끝까지 쓴다</strong></td>
+<td>주소 변환에서 화살표로만 표시, 임계경로에서 기간만 쓰고 경로 누락</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>예시는 문제의 테이블·그림으로</strong></td>
+<td>이상 현상을 일반론으로만 씀 → 주어진 튜플로 써야 점수</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>칸 수를 세어 검산</strong></td>
+<td>교착 4조건에서 비선점 누락(2회), B-Tree 키 k개 ↔ 자식 k+1개</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="n4-16">정의 문장이 거꾸로 읽히지 않게</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>개념</th>
+<th>이렇게 쓰기</th>
+<th>피할 표현</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>LRU</td>
+<td>가장 <strong>오랫동안 참조되지 않은</strong>(마지막 참조 시점이 가장 오래된) 페이지 교체</td>
+<td>"가장 마지막으로 참조된" → MRU로 읽힘</td>
+</tr>
+<tr>
+<td>영속성</td>
+<td><strong>COMMIT된 결과는 장애가 나도 영구 보존</strong></td>
+<td>"rollback될 수 있어야"</td>
+</tr>
+<tr>
+<td>ReLU 위치</td>
+<td>뉴런의 <strong>합(Σwx + b)을 다 구한 뒤</strong> 한 번 적용</td>
+<td>가중치를 곱한 입력마다 적용</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="c-2-weak-map">C-2. 과목별 약점 지도 <span class="badge badge-fire">🔥</span></h2>
+<p>★ = 두 번 이상 틀렸거나 반복 출제된 주제</p>
+<h3 id="n4-17">데이터베이스</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>주제</th>
+<th>내가 틀린 방식</th>
+<th>바로잡은 핵심</th>
+<th>이동</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>★ 이상 현상</td>
+<td>원인을 참조 무결성·트랜잭션으로 연결, 2회 미답</td>
+<td><strong>중복 저장</strong> 때문. 넣을 수 없다 / 지우면 같이 사라진다 / 고치다 어긋난다</td>
+<td><a href="#anomaly">요약</a></td>
+</tr>
+<tr>
+<td>★ 3NF 분해</td>
+<td>(학번, 학과)로 분해</td>
+<td><strong>중간 다리를 키로</strong>: (학번, 지도교수) + (<strong>지도교수</strong>, 학과)</td>
+<td><a href="#sum-normalization">요약</a></td>
+</tr>
+<tr>
+<td>★ 동시성</td>
+<td>"Lock"만 씀</td>
+<td>갱신 손실 → 타임라인 → 결과 → <strong>X-Lock을 COMMIT까지 + 2PL</strong></td>
+<td><a href="#8-1-transaction">8-1</a></td>
+</tr>
+<tr>
+<td>영속성</td>
+<td>rollback 가능으로 씀</td>
+<td>장애가 나도 COMMIT 결과 보존 (로그·REDO)</td>
+<td><a href="#8-1-transaction">8-1</a></td>
+</tr>
+<tr>
+<td>교착 예방(DB)</td>
+<td>"serialize한다"</td>
+<td>보수적 2PL, Wait-Die, Wound-Wait, lock 순서</td>
+<td><a href="#8-1-transaction">8-1</a></td>
+</tr>
+<tr>
+<td>★ SQL 날짜·절 순서</td>
+<td>TO_CHAR, WHERE 뒤 JOIN</td>
+<td>문자열이면 <code>BETWEEN '20220101' AND '20221231'</code>, FROM+JOIN → WHERE</td>
+<td><a href="#8-2-sql">8-2</a></td>
+</tr>
+<tr>
+<td>DDL·DCL</td>
+<td>ALTER, GRANT 백지</td>
+<td>뼈대 코드</td>
+<td><a href="#sum-sql">요약</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="n4-18">운영체제</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>주제</th>
+<th>내가 틀린 방식</th>
+<th>바로잡은 핵심</th>
+<th>이동</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>★ 교착 4조건</td>
+<td>비선점 누락 2회, "동시성" 추가</td>
+<td><strong>상점비순</strong>. 비선점 = 견인차 없음</td>
+<td><a href="#1-6-deadlock">1-6</a></td>
+</tr>
+<tr>
+<td>스핀락 보유 중</td>
+<td>뮤텍스 선택</td>
+<td>스핀락을 잡은 채 <strong>잠들면 안 됨</strong> → 스핀락</td>
+<td><a href="#1-5-synchronization">1-5</a></td>
+</tr>
+<tr>
+<td>fork 반환값</td>
+<td>pid == 0을 부모로</td>
+<td><strong>0 = 자식</strong>, 부모 = 자식 PID</td>
+<td><a href="#1-8-fork-exec-wait">1-8</a></td>
+</tr>
+<tr>
+<td>외부 단편화</td>
+<td>원리 질문</td>
+<td>흩어진 빈 공간, 총량은 충분해도 연속 공간 부족</td>
+<td><a href="#1-7">1-7</a></td>
+</tr>
+<tr>
+<td>세그먼트 주소 변환</td>
+<td>다른 세그먼트 테이블로 감</td>
+<td>세그먼트 번호 = <strong>몇 번째 페이지 테이블</strong>인지의 인덱스</td>
+<td><a href="#1-7">1-7</a></td>
+</tr>
+<tr>
+<td>비선점 스케줄링</td>
+<td>장단점 서술 못 함</td>
+<td>문맥 교환 적음 / <strong>호위 효과</strong></td>
+<td><a href="#1-4-cpu-scheduling">1-4</a></td>
+</tr>
+<tr>
+<td>MMU·가상화·스래싱</td>
+<td>백지</td>
+<td>MMU = 주소 변환 + 보호 / 스래싱 = 부재 처리에 시간 다 씀</td>
+<td><a href="#thrashing">스래싱</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="n4-19">네트워크 · 보안</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>주제</th>
+<th>내가 틀린 방식</th>
+<th>바로잡은 핵심</th>
+<th>이동</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>★ seq/ack</td>
+<td>B의 seq에 A의 번호를 씀</td>
+<td>각자 <strong>자기 번호 공간</strong>. ack = 상대 seq + 상대 길이</td>
+<td><a href="#a-7-tcp-seq-ack">요약 A-7</a></td>
+</tr>
+<tr>
+<td>★ ARP</td>
+<td>"L2 스위치에서", "MAC 테이블"</td>
+<td>ARP는 <strong>호스트·라우터</strong>의 ARP 캐시 / 스위치는 MAC→포트 표</td>
+<td><a href="#2-6-arp-rarp">2-6</a></td>
+</tr>
+<tr>
+<td>★ ARP 스푸핑</td>
+<td>세션 끊기·경쟁으로 추측</td>
+<td><strong>인증 없음 + 요청 안 한 응답도 수락</strong> → 양방향 오염 → 중계</td>
+<td><a href="#2-6-arp-rarp">2-6</a></td>
+</tr>
+<tr>
+<td>계층별 프로토콜</td>
+<td>TCP·UDP를 응용 계층에</td>
+<td>판별 질문 4개</td>
+<td><a href="#2-1-osi-7-tcpip">2-1</a></td>
+</tr>
+<tr>
+<td>DHCP</td>
+<td>라우팅 알고리즘으로 씀</td>
+<td>주소 설정 <strong>자동 임대</strong>, DORA</td>
+<td><a href="#sum-subnet">요약</a></td>
+</tr>
+<tr>
+<td>서브넷 마스크</td>
+<td>1을 오른쪽부터 채움</td>
+<td>마지막 옥텟 = <strong>256 − 블록 크기</strong></td>
+<td><a href="#sum-subnet">요약</a></td>
+</tr>
+<tr>
+<td>라우팅 표</td>
+<td>기본 경로 미적용</td>
+<td><strong>최장 접두사 일치</strong>, 없으면 0.0.0.0</td>
+<td><a href="#2-10-routing">2-10</a></td>
+</tr>
+<tr>
+<td>혼잡 제어</td>
+<td>백지</td>
+<td>곡선 = 느린 시작, 직선 = 혼잡 회피, 절반 = 3 dup ACK, 1 = 타임아웃</td>
+<td><a href="#2-4-vs">2-4</a></td>
+</tr>
+<tr>
+<td>SYN Flooding</td>
+<td>"ACK +1 논리 오류"</td>
+<td><strong>반개방 연결이 백로그 큐 고갈</strong> → SYN 쿠키</td>
+<td><a href="#2-3-tcp-3-way-4-way-handshake">2-3</a></td>
+</tr>
+<tr>
+<td>VPN·IPSec</td>
+<td>사설 IP·방화벽으로 씀</td>
+<td>공용망 위 <strong>암호화 터널</strong> / IP 계층 암호화(AH·ESP·IKE)</td>
+<td><a href="#vpn-ipsec">보안</a></td>
+</tr>
+<tr>
+<td>XSS·CSRF</td>
+<td>SQL 삽입으로 씀, CSRF 처음</td>
+<td>스크립트가 <strong>사용자 브라우저</strong>에서 / <strong>사용자 권한</strong>으로 위조 요청</td>
+<td><a href="#sum-sqli">요약</a></td>
+</tr>
+<tr>
+<td>DNS 레코드</td>
+<td>백지</td>
+<td>A, CNAME, MX, NS</td>
+<td><a href="#dns-3">요약</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="n4-20">컴퓨터구조 · 자료구조 · 알고리즘</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>주제</th>
+<th>내가 틀린 방식</th>
+<th>바로잡은 핵심</th>
+<th>이동</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>★ B-Tree 삽입</td>
+<td>형제로 재분배, 분할 미완</td>
+<td>넘치면 <strong>가운데를 올리고 좌우로 쪼갬</strong>, 루트 분할 = 높이 +1</td>
+<td><a href="#5-3">5-3</a></td>
+</tr>
+<tr>
+<td>해시</td>
+<td>개방 주소·체이닝 백지, 문제점 모름</td>
+<td>선형 조사 = <strong>1차 군집</strong></td>
+<td><a href="#5-3">5-3</a></td>
+</tr>
+<tr>
+<td>다익스트라</td>
+<td>방문 정점의 갱신 누락</td>
+<td>"X까지 방문" = X의 <strong>인접 완화까지</strong></td>
+<td><a href="#5-4">5-4</a></td>
+</tr>
+<tr>
+<td>DP</td>
+<td>A·B 구분 없이 O(N log N)</td>
+<td>재귀 = 노드 수, 반복문 = 횟수 곱 / <strong>중복되는 부분 문제</strong></td>
+<td><a href="#5-5-dynamic-programming">5-5</a></td>
+</tr>
+<tr>
+<td>RISC·CISC</td>
+<td>백지</td>
+<td>연산에 메모리 <code>[…]</code>가 오면 CISC, ldr/str만 RISC</td>
+<td><a href="#risc-vs-cisc">RISC vs CISC</a></td>
+</tr>
+<tr>
+<td>RAID</td>
+<td>번호가 한 칸씩 밀림</td>
+<td>0 스트라이핑, 1 미러링, 5 분산 패리티, 6 이중 패리티</td>
+<td><a href="#4-5-raid">4-5</a></td>
+</tr>
+<tr>
+<td>캐시 쓰기</td>
+<td>쓰기를 히트율로 계산</td>
+<td>write-through <strong>쓰기 = 항상 메모리 시간</strong></td>
+<td><a href="#4-3-cache-memory">4-3</a></td>
+</tr>
+<tr>
+<td>플래시</td>
+<td>백지</td>
+<td>페이지 쓰기 / 블록 지우기 / 덮어쓰기 불가 / 수명</td>
+<td><a href="#4-6-ssd">4-6</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="n4-21">SW공학 · 프로그래밍 · AI</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>주제</th>
+<th>내가 틀린 방식</th>
+<th>바로잡은 핵심</th>
+<th>이동</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>결합도·응집도</td>
+<td>백지</td>
+<td><strong>자스제외공내 / 기순교절시논우</strong></td>
+<td><a href="#coupling-cohesion">요약</a></td>
+</tr>
+<tr>
+<td>싱글톤</td>
+<td>getter·setter로 관리</td>
+<td>private 생성자 + static 인스턴스 + <strong>getInstance()</strong>, setter 금지</td>
+<td><a href="#7-4">7-4</a></td>
+</tr>
+<tr>
+<td>블랙박스·오라클</td>
+<td>기법 나열 못 함</td>
+<td>동등 분할, 경계값, 결정 테이블 / 오라클 = 판정 기준</td>
+<td><a href="#sum-blackbox">요약</a></td>
+</tr>
+<tr>
+<td>캡슐화·상속</td>
+<td>모듈화·추상화와 혼동</td>
+<td>묶기 + 은닉 / 물려받아 재사용·확장(is-a)</td>
+<td><a href="#7-3-oop">7-3</a></td>
+</tr>
+<tr>
+<td>생성자 연쇄</td>
+<td>Child2(String)이 Parent(String) 호출</td>
+<td>자식 매개변수와 무관하게 <strong>super()</strong> 자동 삽입</td>
+<td><a href="#sw-n3">7-3</a></td>
+</tr>
+<tr>
+<td>C 수학 함수</td>
+<td>Math.sqrt</td>
+<td><code>sqrt(pow(…))</code>, 대소문자 구분</td>
+<td><a href="#10-4-c-vs-java">10-4</a></td>
+</tr>
+<tr>
+<td>퍼셉트론</td>
+<td>입력마다 ReLU</td>
+<td>합 뒤에 한 번</td>
+<td><a href="#9-5-gradient-descent">9-5</a></td>
+</tr>
+<tr>
+<td>기울기 소실</td>
+<td>해결책을 SGD로</td>
+<td><strong>LSTM·GRU</strong>, ReLU, 초기화</td>
+<td><a href="#9-6-rnn-vanishing">9-6</a></td>
+</tr>
+<tr>
+<td>국소 최솟값</td>
+<td>SGD 한 단어</td>
+<td>SGD·모멘텀·Adam·재시작 + 원리</td>
+<td><a href="#9-5-gradient-descent">9-5</a></td>
+</tr>
+<tr>
+<td>K-NN</td>
+<td>K를 반지름으로 이해</td>
+<td>K = 이웃 <strong>개수</strong>, 정렬표로 판정</td>
+<td><a href="#9-2-knn">9-2</a></td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="c-3-calc-check">C-3. 계산 문제 체크리스트 <span class="badge badge-calc">🧮</span></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>유형</th>
+<th>마지막에 확인할 것</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>주소 변환</td>
+<td>비트 분할 → 테이블 조회 → <strong>물리 주소 비트열 전체</strong> 쓰기</td>
+</tr>
+<tr>
+<td>VLSM</td>
+<td>큰 블록부터, 마스크 = 256 − 블록, 첫 주소 기준(네트워크 주소/첫 호스트) 통일</td>
+</tr>
+<tr>
+<td>라우팅 표</td>
+<td>마스크가 걸린 옥텟만 AND, 가장 긴 마스크, 없으면 기본 경로</td>
+</tr>
+<tr>
+<td>다익스트라</td>
+<td>단계별 dist 표, 방문 정점의 이웃 완화 포함</td>
+</tr>
+<tr>
+<td>프림·크루스칼</td>
+<td>간선을 <strong>정점 쌍</strong>으로, 총합 검산</td>
+</tr>
+<tr>
+<td>임계경로</td>
+<td>ES/EF/LS 표 → <strong>경로와 기간 둘 다</strong></td>
+</tr>
+<tr>
+<td>기능점수</td>
+<td>EI는 입력+수정+삭제 합산, <strong>평균 내지 않고 합</strong></td>
+</tr>
+<tr>
+<td>캐시 시간</td>
+<td>계층적/동시 접근 <strong>가정 명시</strong>, write-through 쓰기 = Tm</td>
+</tr>
+<tr>
+<td>은행원</td>
+<td>가용 = 총 − 할당 합, 완료 시 <strong>할당량 반납</strong> 숫자 기록</td>
+</tr>
+<tr>
+<td>스케줄링</td>
+<td>도착 시각마다 남은 시간 비교(SRT)</td>
+</tr>
+<tr>
+<td>해시</td>
+<td>키 % SIZE 표, 탐사 경로 기록</td>
+</tr>
+<tr>
+<td>퍼셉트론</td>
+<td>입력 | z | h | y 표</td>
+</tr>
+<tr>
+<td>K-NN</td>
+<td>거리 → 정렬표 → 상위 K 다수결 (그래프 눈대중 금지)</td>
+</tr>
+<tr>
+<td>seq/ack</td>
+<td>SYN·FIN = 1, 데이터 = 바이트 수, 순수 ACK = 0</td>
+</tr>
+</tbody>
+</table></div>
+</div>

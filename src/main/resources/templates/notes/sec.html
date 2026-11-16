@@ -1,0 +1,1028 @@
+<div class="note-body" th:fragment="content" th:inline="none" xmlns:th="http://www.thymeleaf.org">
+<h1 id="part-3">Part 3. 정보보안</h1>
+<blockquote><p>네트워크 공격(DoS·스푸핑·웹 공격)과 보안 프로토콜(HTTPS·VPN·IPSec), 암호 기초. HTTP vs HTTPS, 대칭키 vs 비대칭키, XSS vs CSRF vs SQLi 비교는 요약 페이지에 있다.</p></blockquote>
+<h2 id="3-1">3-1. 네트워크 공격과 보안 프로토콜 <span class="badge badge-fire">🔥</span></h2>
+<p class="moved-stub">↗ 요약 페이지 · <a href="#http-vs-https">HTTP vs HTTPS</a></p>
+<p class="moved-stub">↗ 요약 페이지 · <a href="#vs_1">대칭키 vs 비대칭키(공개키)</a></p>
+<h3 id="sec-n1"><span class="badge badge-fire">🔥</span> 비대칭키를 이용한 대칭키 교환 순서</h3>
+<blockquote>
+<p><strong>배경</strong>: 비대칭키는 안전하지만 느리다. 대칭키는 빠르지만 <strong>키를 어떻게 안전하게 전달하느냐</strong>가 문제다.
+→ <strong>해결: 느린 비대칭키로 "대칭키 자체"만 한 번 안전하게 전달하고, 이후 실제 데이터는 빠른 대칭키로 주고받는다.</strong> 이것이 <strong>하이브리드 암호 방식</strong>이고 TLS의 원리다.</p>
+</blockquote>
+<p><strong>교환 순서</strong> (서버 A ← 클라이언트 B)</p>
+<pre><code>① 서버 A가 공개키/개인키 쌍을 생성한다.
+   (개인키는 절대 외부로 내보내지 않고 안전하게 보관)
+
+② 클라이언트 B가 서버 A에 접속을 요청한다.
+
+③ 서버 A는 자신의 공개키가 담긴 인증서(CA가 서명)를 B에게 전송한다.
+
+④ B는 CA의 공개키로 인증서 서명을 검증하여
+   &quot;이 공개키가 정말 A의 것인지&quot; 확인한다.  ← 중간자 공격(MITM) 방지 단계
+
+⑤ B가 세션에서 사용할 대칭키(세션 키)를 생성한다.
+
+⑥ B는 이 대칭키를 A의 공개키로 암호화하여 A에게 전송한다.
+
+⑦ A는 자신의 개인키로 복호화하여 대칭키를 획득한다.
+   → 개인키는 A만 가지고 있으므로, 도중에 가로채도 복호화 불가능
+
+⑧ 이후 A와 B는 이 공유된 대칭키로 실제 데이터를 암호화하여 통신한다.
+</code></pre>
+<blockquote>
+<p><strong>④번 인증서 검증 단계를 빼먹지 말 것.</strong> 이게 없으면 공격자가 자기 공개키를 A의 것인 척 보내는 중간자 공격이 성립한다. 이 단계를 쓰면 확실한 가점 요소다.</p>
+</blockquote>
+<h3 id="vpn-ipsec">VPN · IPSec <span class="badge badge-star">⭐</span></h3>
+<p><strong>VPN (Virtual Private Network, 가상 사설망)</strong>: 인터넷 같은 <strong>공용망 위에 암호화된 터널</strong>을 만들어 전용선처럼 안전하게 통신하는 기술 (터널링 + 암호화 + 인증).</p>
+<ul>
+<li><strong>원리 — 터널링</strong>: 원본 패킷을 통째로 암호화해 새 패킷 안에 <strong>캡슐화</strong>해 보낸다.</li>
+<li><strong>필요성</strong>: 전용선은 비싸다. 인터넷을 쓰면서 암호화로 보안을 확보해 <strong>저비용으로 사설망 수준의 보안</strong>을 얻는다.</li>
+</ul>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>유형</th>
+<th>용도</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Site-to-Site</td>
+<td>본사 ↔ 지사 네트워크 연결</td>
+</tr>
+<tr>
+<td>Remote Access</td>
+<td>재택·출장자가 회사망에 접속</td>
+</tr>
+<tr>
+<td>계층별</td>
+<td>IPSec(3계층), SSL/TLS VPN(응용), L2TP(2계층)</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>IPSec (IP Security)</strong>: <strong>IP 계층(3계층)에서 패킷을 인증·암호화</strong>하는 프로토콜 모음, VPN 구현의 표준. (방화벽이 아님 — 방화벽은 <strong>차단</strong>, IPSec은 <strong>암호화</strong>)</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>구성</th>
+<th>역할</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>AH</strong> (Authentication Header)</td>
+<td>인증 + 무결성 (<strong>암호화 X</strong>)</td>
+</tr>
+<tr>
+<td><strong>ESP</strong> (Encapsulating Security Payload)</td>
+<td>인증 + 무결성 + <strong>암호화(기밀성)</strong></td>
+</tr>
+<tr>
+<td><strong>IKE</strong> (Internet Key Exchange)</td>
+<td>키 교환, SA(보안 연관) 설정</td>
+</tr>
+</tbody>
+</table></div>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>모드</th>
+<th>보호 범위</th>
+<th>용도</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>전송 모드</strong></td>
+<td>IP <strong>페이로드만</strong>, 원래 IP 헤더 유지</td>
+<td>호스트 ↔ 호스트</td>
+</tr>
+<tr>
+<td><strong>터널 모드</strong></td>
+<td><strong>원래 IP 패킷 전체</strong>를 암호화하고 새 IP 헤더를 붙임</td>
+<td><strong>게이트웨이 ↔ 게이트웨이 (VPN)</strong></td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>3계층에서 동작하는 이점: 상위 계층(TCP/UDP, 응용) <strong>프로그램을 고치지 않고도</strong> 모든 트래픽에 보안을 적용할 수 있다.</li>
+</ul>
+<h3 id="dos-vs-ddos"><span class="badge badge-fire">🔥</span> DoS vs DDoS</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th><strong>DoS</strong> (Denial of Service)</th>
+<th><strong>DDoS</strong> (Distributed DoS)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>정의</td>
+<td><strong>단일 공격자</strong>가 대상 시스템의 자원을 고갈시켜 정상 서비스를 불가능하게 만드는 공격</td>
+<td><strong>다수의 분산된 좀비 PC(봇넷)</strong> 를 동원한 DoS 공격</td>
+</tr>
+<tr>
+<td>공격 출발지</td>
+<td>하나 또는 소수</td>
+<td><strong>수천~수십만 개</strong></td>
+</tr>
+<tr>
+<td>차단 난이도</td>
+<td>상대적으로 쉬움 (IP 차단)</td>
+<td><strong>매우 어려움</strong> — 출발지가 정상 사용자와 구별되지 않음</td>
+</tr>
+<tr>
+<td>구조</td>
+<td>공격자 → 대상</td>
+<td>공격자 → <strong>C&amp;C 서버</strong> → 좀비 PC 다수 → 대상</td>
+</tr>
+<tr>
+<td>공격 유형</td>
+<td>SYN Flooding, Ping of Death, Teardrop, Land Attack, Slowloris</td>
+<td>UDP Flooding, <strong>DNS/NTP 증폭(Amplification) 공격</strong>, HTTP Flooding</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>대응 방안</strong>: 방화벽/IPS, <strong>트래픽 임계치 기반 필터링</strong>, <strong>CDN 및 트래픽 분산</strong>, Anycast, 클라우드 DDoS 방어 서비스(스크러빙 센터), Rate Limiting, 좀비 PC 감염 예방</p>
+<h3 id="syn-flooding"><span class="badge badge-fire">🔥</span> SYN Flooding</h3>
+<p><strong>공격 방식</strong></p>
+<pre><code>1. 공격자가 서버로 SYN 패킷을 대량 전송한다.
+   이때 출발지 IP를 존재하지 않는 주소로 위조(IP Spoofing)한다.
+
+2. 서버는 각 SYN에 대해 SYN+ACK를 보내고,
+   연결 정보를 백로그 큐(Backlog Queue)에 저장한 뒤
+   SYN_RECEIVED 상태로 마지막 ACK를 기다린다.
+
+3. 출발지가 위조되었으므로 ACK는 영원히 오지 않는다.
+   → 연결이 half-open 상태로 큐를 점유한 채 방치된다.
+
+4. 백로그 큐가 가득 차면
+   → 정상 사용자의 연결 요청조차 거부된다. (서비스 거부)
+</code></pre>
+<blockquote>
+<p><strong>핵심</strong>: <strong>3-way Handshake의 미완성 상태를 악용</strong>하여 서버의 <strong>연결 큐(자원)를 고갈</strong>시키는 공격. 대역폭이 아니라 <strong>상태 정보 자원</strong>을 고갈시킨다는 점이 특징이다.</p>
+</blockquote>
+<p><strong>해결 방법</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>방법</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>① SYN Cookie</strong></td>
+<td>서버가 <strong>백로그 큐에 상태를 저장하지 않고</strong>, 연결 정보를 해시한 값을 SYN+ACK의 시퀀스 번호에 담아 보낸다. 클라이언트가 ACK로 그 값을 되돌려 주면 그때 비로소 연결을 생성한다. → <strong>상태를 저장하지 않으므로 큐가 고갈되지 않는다.</strong> 가장 근본적인 대응</td>
+</tr>
+<tr>
+<td>② 백로그 큐 크기 증가</td>
+<td>임시방편. 근본 해결은 아님</td>
+</tr>
+<tr>
+<td>③ SYN_RECEIVED 타임아웃 단축</td>
+<td>half-open 연결을 빨리 정리</td>
+</tr>
+<tr>
+<td>④ 방화벽/IPS 필터링</td>
+<td>동일 출발지의 비정상적 SYN 폭주 차단, Rate Limiting</td>
+</tr>
+<tr>
+<td>⑤ First SYN Drop</td>
+<td>첫 SYN을 의도적으로 버리고 재전송되는지 확인 (정상 클라이언트만 재전송함)</td>
+</tr>
+<tr>
+<td>⑥ 침입 차단 시스템</td>
+<td>위조된 출발지 IP 필터링(Ingress Filtering)</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="arp-spoofing"><span class="badge badge-fire">🔥</span> ARP Spoofing</h3>
+<p><strong>공격이 가능한 근본 원인</strong></p>
+<blockquote>
+<p>ARP 프로토콜은 <strong>ARP Reply를 받았을 때 그것이 진짜인지 검증하는 인증 절차가 전혀 없다.</strong> 요청하지 않은 응답(Gratuitous ARP)도 그대로 받아들여 캐시 테이블을 갱신한다.</p>
+</blockquote>
+<p><strong>공격 방식</strong></p>
+<pre><code>1. 공격자가 피해자 PC에게 위조된 ARP Reply를 반복 전송한다.
+   &quot;게이트웨이(192.168.1.254)의 MAC은 나(공격자 MAC)야&quot;
+
+2. 동시에 게이트웨이에게도 위조 ARP Reply를 보낸다.
+   &quot;피해자(192.168.1.x)의 MAC은 나야&quot;
+
+3. 양쪽의 ARP 캐시 테이블이 오염된다.
+
+4. 이제 피해자 ↔ 게이트웨이 사이의 모든 트래픽이
+   공격자를 경유하게 된다.
+   → 중간자 공격(MITM) 성립
+
+5. 공격자는 트래픽을 도청(스니핑)하거나 변조한 뒤,
+   다시 정상 목적지로 전달(포워딩)한다.
+</code></pre>
+<p><strong><span class="badge badge-fire">🔥</span> 시나리오 — 공격자 판별하기</strong></p>
+<p>주어진 상황(게이트웨이 = 192.168.1.254, MAC: X):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>PC</th>
+<th>IP</th>
+<th>실제 MAC</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PC A</td>
+<td>192.168.1.1</td>
+<td>A</td>
+</tr>
+<tr>
+<td>PC B</td>
+<td>192.168.1.2</td>
+<td><strong>B</strong></td>
+</tr>
+<tr>
+<td>PC C</td>
+<td>192.168.1.3</td>
+<td>C</td>
+</tr>
+<tr>
+<td>라우터</td>
+<td>192.168.1.254</td>
+<td>X</td>
+</tr>
+</tbody>
+</table></div>
+<p>각 PC의 ARP 캐시 테이블:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>PC A의 테이블</th>
+<th>PC B의 테이블</th>
+<th>PC C의 테이블</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>192.168.1.2 → <strong>B</strong></td>
+<td>192.168.1.1 → A</td>
+<td>192.168.1.1 → A</td>
+</tr>
+<tr>
+<td>192.168.1.3 → C</td>
+<td>192.168.1.3 → C</td>
+<td>192.168.1.2 → <strong>B</strong></td>
+</tr>
+<tr>
+<td>192.168.1.254 → <strong>B</strong> ⚠️</td>
+<td>192.168.1.254 → <strong>X</strong> ✅</td>
+<td>192.168.1.254 → <strong>B</strong> ⚠️</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>판별 논리 (답안 구조)</strong></p>
+<pre><code>① 게이트웨이(192.168.1.254)의 실제 MAC은 X 이다.
+② 그런데 PC A와 PC C의 ARP 테이블에는
+   192.168.1.254 → MAC B 로 잘못 기록되어 있다.
+③ MAC B는 PC B의 MAC 주소이다.
+④ 오직 PC B만이 게이트웨이의 MAC을 X(정상)로 올바르게 알고 있다.
+   → 공격자는 자기 자신은 정상 경로를 유지해야
+     가로챈 트래픽을 실제 게이트웨이로 포워딩할 수 있기 때문이다.
+
+✅ 결론: 공격자 호스트는 PC B 이며,
+   현재 진행 중인 공격은 ARP Spoofing을 이용한
+   중간자 공격(MITM)이다.
+</code></pre>
+<blockquote>
+<p><strong>판별 핵심</strong>: "<strong>자기 테이블만 정상이고 남들 테이블만 오염된 PC</strong>"가 공격자다. 이 논리를 답안에 반드시 명시할 것.</p>
+</blockquote>
+<p><strong><span class="badge badge-fire">🔥</span> 공격 성공 후에도 은닉이 가능했던 이유</strong>
+1. <strong>트래픽을 그대로 포워딩</strong>하기 때문이다. 공격자는 가로챈 패킷을 도청·복사한 뒤 <strong>정상 목적지로 다시 전달</strong>하므로, 피해자 입장에서는 인터넷이 정상 동작하는 것처럼 보여 이상을 감지할 수 없다.
+2. <strong>ARP는 2계층 프로토콜</strong>이라 <strong>로컬 네트워크 내부에서만 동작</strong>한다. 라우터를 넘어가지 않으므로 외부 보안 장비나 방화벽 로그에 흔적이 남지 않는다.
+3. ARP 캐시는 주기적으로 만료되지만, 공격자가 <strong>위조 ARP Reply를 지속적으로 재전송</strong>하여 오염 상태를 유지한다.
+4. ARP에는 <strong>인증·로깅 메커니즘이 없어</strong> 정상 갱신과 공격을 구별할 근거가 남지 않는다.</p>
+<p><strong><span class="badge badge-fire">🔥</span> 기술적 보안 대책</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>대책</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>① 정적 ARP 테이블(Static ARP) 설정</strong></td>
+<td>게이트웨이 등 중요 장비의 IP-MAC 매핑을 <strong>수동으로 고정</strong>하여 ARP Reply로 갱신되지 않게 한다. 가장 확실하지만 관리 부담이 크다</td>
+</tr>
+<tr>
+<td><strong>② DAI (Dynamic ARP Inspection)</strong></td>
+<td>스위치가 <strong>DHCP Snooping 테이블과 대조</strong>하여 위조된 ARP 패킷을 차단한다</td>
+</tr>
+<tr>
+<td>③ Port Security</td>
+<td>스위치 포트별로 허용 MAC 주소를 제한</td>
+</tr>
+<tr>
+<td>④ ARP 감시 도구</td>
+<td>arpwatch 등으로 IP-MAC 매핑 변경을 실시간 탐지·경보</td>
+</tr>
+<tr>
+<td>⑤ 네트워크 분할</td>
+<td>VLAN으로 브로드캐스트 도메인을 분리하여 공격 범위를 축소</td>
+</tr>
+<tr>
+<td>⑥ 종단 간 암호화</td>
+<td><strong>HTTPS, VPN, TLS</strong> 적용 — 가로채도 내용을 볼 수 없게 한다 (근본적 피해 완화)</td>
+</tr>
+<tr>
+<td>⑦ 802.1X 인증</td>
+<td>네트워크 접속 자체에 인증을 요구하여 미인가 장비 차단</td>
+</tr>
+</tbody>
+</table></div>
+<p class="moved-stub">↗ 요약 페이지 · <a href="#xss-vs-csrf">XSS vs CSRF</a></p>
+<h3 id="social-engineering">사회공학 기법 (Social Engineering) <span class="badge badge-star">⭐</span></h3>
+<p><strong>정의</strong>: 기술적 취약점이 아니라 <strong>사람의 심리·신뢰·부주의를 악용</strong>하여 기밀 정보를 획득하거나 시스템에 침투하는 공격 기법.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>기법</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>피싱(Phishing)</strong></td>
+<td>정상 기관을 사칭한 이메일/사이트로 계정 정보 탈취</td>
+</tr>
+<tr>
+<td><strong>스피어 피싱(Spear Phishing)</strong></td>
+<td>특정 인물·조직을 겨냥한 <strong>맞춤형</strong> 피싱 (실명, 직책, 업무 내용 활용)</td>
+</tr>
+<tr>
+<td><strong>스미싱(Smishing)</strong></td>
+<td>문자메시지(SMS)로 악성 링크 유도</td>
+</tr>
+<tr>
+<td><strong>보이스 피싱(Vishing)</strong></td>
+<td>전화 통화로 금융/개인 정보 요구</td>
+</tr>
+<tr>
+<td><strong>파밍(Pharming)</strong></td>
+<td>DNS 변조 등으로 정상 주소를 입력해도 가짜 사이트로 유도</td>
+</tr>
+<tr>
+<td><strong>테일게이팅(Tailgating)/피기배킹</strong></td>
+<td>출입 인가자를 뒤따라 물리적으로 무단 진입</td>
+</tr>
+<tr>
+<td><strong>숄더 서핑(Shoulder Surfing)</strong></td>
+<td>어깨너머로 비밀번호 훔쳐보기</td>
+</tr>
+<tr>
+<td><strong>덤스터 다이빙(Dumpster Diving)</strong></td>
+<td>폐기된 문서·저장매체에서 정보 수집</td>
+</tr>
+<tr>
+<td><strong>프리텍스팅(Pretexting)</strong></td>
+<td>그럴듯한 상황을 꾸며(IT 지원팀 사칭 등) 정보를 요구</td>
+</tr>
+<tr>
+<td><strong>미끼(Baiting)</strong></td>
+<td>악성코드가 담긴 USB를 흘려두어 꽂게 유도</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>대응</strong>: 정기적 <strong>보안 인식 교육</strong>, 모의 훈련, 다중 인증(MFA), 정보 요청 시 별도 채널로 신원 재확인 절차 마련, 문서 파쇄 정책</p>
+<h3 id="dos-definition-frame">DoS 정의 서술 틀 <span class="badge badge-fire">🔥</span></h3>
+<blockquote>
+<p><strong>DoS</strong>: 대상 시스템의 <strong>자원(CPU·메모리·대역폭·연결 큐)을 고갈</strong>시켜 <strong>정상 사용자가 서비스를 이용하지 못하게</strong> 하는 공격 — 정보보안 3요소 중 <strong>가용성(Availability)</strong> 침해.
+<strong>DDoS</strong>: 악성코드에 감염된 <strong>다수의 좀비 PC(봇넷)를 C&amp;C 서버로 조종</strong>해 동시에 DoS를 수행 — 출발지가 많고 정상 트래픽과 구별이 어려워 차단이 어렵다.</p>
+</blockquote>
+<h3 id="ping-of-death">Ping of Death <span class="badge badge-fire">🔥</span></h3>
+<ul>
+<li><strong>원리</strong>: ICMP Echo Request를 IP 최대 크기(<strong>65,535바이트</strong>)보다 <strong>크게</strong> 만들어 전송 → 전송 중 <strong>단편화(Fragmentation)</strong> → 수신 측이 <strong>재조합</strong>할 때 버퍼가 넘쳐(Overflow) 시스템이 다운</li>
+<li><strong>대응</strong>: 비정상 크기·단편화된 ICMP 패킷 차단, OS 패치(재조합 전 길이 검사), 방화벽에서 ICMP 제한</li>
+<li>같은 계열(단편화 악용): <strong>Teardrop</strong>(단편 offset을 겹치게 조작), <strong>Land Attack</strong>(출발지 IP = 목적지 IP)</li>
+</ul>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>공격</th>
+<th>핵심 동작</th>
+<th>고갈되는 자원</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Ping of Death</strong></td>
+<td>핑을 <strong>크게</strong></td>
+<td>재조합 <strong>버퍼(메모리)</strong></td>
+</tr>
+<tr>
+<td>ICMP Flooding / Smurf</td>
+<td>핑을 <strong>많이</strong> (Smurf는 브로드캐스트 증폭)</td>
+<td><strong>대역폭</strong></td>
+</tr>
+<tr>
+<td>SYN Flooding</td>
+<td>연결을 <strong>반쯤만</strong> 열어 둠</td>
+<td><strong>백로그 큐(연결 상태 정보)</strong></td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p>⚠️ <strong>실제 오답 사례</strong>: "쓸데없는 핑을 많이 보내 대기 큐를 채운다"는 Ping of Death가 아니다. "많이"는 ICMP Flooding, "큐 고갈"은 SYN Flooding이다. <strong>고갈 자원</strong>으로 구별한다.</p>
+</blockquote>
+<h3 id="ip-spoofing">IP Spoofing — TCP 신뢰 관계 악용 공격 <span class="badge badge-fire">🔥</span> <span class="badge badge-pencil">✍️</span></h3>
+<p><strong>목적</strong>: Target이 "이 IP는 믿을 수 있다"고 설정해 둔 <strong>IP 기반 신뢰 관계(rlogin/rsh, .rhosts)</strong>를 이용해 인증 없이 접속하는 것.</p>
+<pre><code>공격자 ──① DoS(SYN Flooding)──────────▶ 정상 사용자 (응답 불능)
+공격자 ──② SYN (출발지 = 정상 사용자 IP)─▶ Target
+Target ──③ SYN/ACK ──────────────────▶ 정상 사용자 (무력화되어 RST 못 보냄)
+공격자 ──④ ACK (ACK = 예측한 ISN + 1) ──▶ Target
+         ⑤ 연결 완료 → Target은 신뢰 호스트로 착각, 명령 실행 허용
+</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>단계</th>
+<th>설명 (답안에 꼭 들어갈 키워드)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>①</td>
+<td>정상 사용자를 <strong>DoS로 무력화</strong> — ③의 SYN/ACK를 받으면 "요청한 적 없다"며 <strong>RST로 연결을 끊어버리기 때문</strong></td>
+</tr>
+<tr>
+<td>②</td>
+<td>출발지 IP를 정상 사용자로 <strong>위조한 SYN</strong> 전송 (이것이 Spoofing)</td>
+</tr>
+<tr>
+<td>④</td>
+<td>공격자는 SYN/ACK를 <strong>보지 못한다</strong>(정상 사용자에게 감) → Target의 <strong>ISN(초기 순서 번호)을 예측</strong>해 ACK = ISN + 1 전송 → "Blind Spoofing"</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>ISN 예측 원리</strong>: 과거 OS는 ISN을 규칙적 카운터로 생성(예: 초기 BSD 계열 초당 +128,000, 연결당 +64,000). 공격자가 자기 IP로 정상 연결을 여러 번 맺어 ISN을 관찰 → 증가 규칙 파악 → 다음 ISN 추정 (1994 미트닉 사건).</p>
+<ul>
+<li><strong>취약점 원인 2가지</strong>: ① IP 주소만으로 인증하는 신뢰 관계 ② 예측 가능한 ISN</li>
+<li><strong>대응</strong>: ISN 무작위화(RFC 6528: ISN = 타이머 + Hash(4-tuple, 비밀키)), IP 기반 인증(rhosts) 폐지 → SSH 등 암호 인증, 외부에서 들어오는 내부 IP 패킷 차단(Ingress Filtering)</li>
+</ul>
+<h3 id="drdos">DRDoS (Distributed Reflection DoS) <span class="badge badge-fire">🔥</span></h3>
+<p><strong>Reflection = 반사</strong>. 피해자를 직접 공격하지 않고 <strong>정상 서버들을 거울처럼 이용</strong>한다.</p>
+<pre><code>공격자 ── 요청(출발지 IP = 피해자 IP로 위조) ──▶ 정상 서버 다수 (DNS, NTP 등 = 반사체)
+                                                   │ 정상적으로 응답할 뿐인데
+                                                   ▼ 응답이 전부 &quot;출발지&quot;로
+                                                피해자 (트래픽 폭주)
+</code></pre>
+<ul>
+<li><strong>증폭(Amplification)</strong>: 작은 요청으로 큰 응답을 얻는 서비스 이용 (DNS ANY 질의, NTP monlist, Memcached) — 주로 <strong>UDP</strong> 기반(연결 과정이 없어 위조 쉬움)</li>
+<li><strong>DDoS와 차이</strong>: 좀비 PC 없이도 가능, <strong>공격 패킷의 출발지가 정상 서버</strong>라 추적·차단 어려움</li>
+<li><strong>대응</strong>: 출발지 IP 위조 차단(Ingress Filtering, BCP 38), 반사체 서버의 불필요 서비스 비활성화(외부 재귀 DNS 차단, monlist 비활성화), 응답 빈도 제한(RRL·Rate Limiting), DDoS 방어 서비스</li>
+</ul>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>비교</th>
+<th>DoS</th>
+<th>DDoS</th>
+<th>DRDoS</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>공격 주체</td>
+<td>단일 공격자</td>
+<td>봇넷(좀비 PC)</td>
+<td>공격자 + <strong>정상 서버(반사체)</strong></td>
+</tr>
+<tr>
+<td>패킷 출발지</td>
+<td>공격자</td>
+<td>좀비 PC</td>
+<td>정상 서버</td>
+</tr>
+<tr>
+<td>증폭</td>
+<td>없음</td>
+<td>수량으로 압도</td>
+<td><strong>응답 크기 증폭</strong></td>
+</tr>
+<tr>
+<td>추적 난이도</td>
+<td>쉬움</td>
+<td>어려움</td>
+<td><strong>매우 어려움</strong></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="ftp-security">FTP 보안 — 능동/수동 모드, SFTP vs FTPS <span class="badge badge-fire">🔥</span></h3>
+<p><strong>FTP 구조</strong>: <strong>제어 채널(TCP 21, 명령)</strong> + <strong>데이터 채널(파일 전송)</strong> 2개 연결을 쓴다. 기본은 <strong>평문</strong> 전송이라 USER/PASS가 그대로 노출된다(스니핑).</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>명령어</th>
+<th>의미</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>USER / PASS</td>
+<td>사용자 ID / 비밀번호 전송 (평문)</td>
+</tr>
+<tr>
+<td>PORT</td>
+<td><strong>능동 모드</strong> — 클라이언트가 자기 데이터 포트를 서버에 알림</td>
+</tr>
+<tr>
+<td>PASV</td>
+<td><strong>수동 모드</strong> 전환 요청 — 서버가 데이터 포트를 알려줌</td>
+</tr>
+<tr>
+<td>RETR / STOR</td>
+<td>파일 다운로드 / 업로드</td>
+</tr>
+</tbody>
+</table></div>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>FTPS (FTP over SSL/TLS)</th>
+<th>SFTP (SSH File Transfer Protocol)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>기반</td>
+<td><strong>기존 FTP + TLS 암호화</strong></td>
+<td><strong>SSH(22) 위의 별개 프로토콜</strong></td>
+</tr>
+<tr>
+<td>연결</td>
+<td>제어·데이터 2채널 그대로</td>
+<td><strong>단일 연결</strong></td>
+</tr>
+<tr>
+<td>인증</td>
+<td>X.509 인증서 + ID/PW</td>
+<td>SSH 키 또는 ID/PW</td>
+</tr>
+<tr>
+<td>방화벽</td>
+<td>데이터 포트 개방 필요 → 설정 복잡</td>
+<td>22번 하나만 열면 됨</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p>⚠️ <strong>함정</strong>: SFTP는 "Secure FTP"가 아니라 <strong>SSH 기반의 전혀 다른 프로토콜</strong>이다.</p>
+</blockquote>
+<p><strong>능동(Active) 모드 vs 수동(Passive) 모드</strong></p>
+<pre><code>[능동]  클라이언트 ──PORT 5001──▶ 서버:21      [수동]  클라이언트 ──PASV──▶ 서버:21
+        클라이언트:5001 ◀──접속── 서버:20              클라이언트 ◀── &quot;포트 50000&quot; ── 서버
+        (서버가 클라이언트로 연결)                     클라이언트 ──접속──▶ 서버:50000
+</code></pre>
+<ul>
+<li><strong>능동 모드 취약점</strong>
+  1. <strong>서버가 클라이언트 쪽으로 접속</strong>하므로 클라이언트 방화벽이 <strong>외부발 인바운드 연결을 허용</strong>해야 함 → 클라이언트가 공격에 노출, NAT 환경에서는 연결 실패
+  2. <strong>FTP Bounce 공격</strong>: PORT 명령에 <strong>제3 호스트의 IP·포트</strong>를 넣어 서버가 그곳으로 접속하게 만듦 → 포트 스캔, 방화벽 우회</li>
+<li><strong>해결 방안</strong>: <strong>수동 모드 사용</strong> + 서버의 수동 포트 범위를 좁게 제한, PORT 명령의 IP가 실제 클라이언트 IP와 같은지 검증(Bounce 차단), FTPS/SFTP로 암호화, 익명 FTP 비활성화</li>
+</ul>
+<hr />
+<h2 id="3-2-crypto">3-2. 암호 기초 — 해시 · MAC · 전자서명 · PKI <span class="badge badge-fire">🔥</span></h2>
+<blockquote>
+<p>대칭키 vs 공개키 비교는 <a href="#vs_1">요약 → 대칭키 vs 비대칭키</a>에 있다. 여기서는 그 위에 쌓는 내용만 다룬다.</p>
+</blockquote>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>목적</th>
+<th>누구의 키로 암호화</th>
+<th>누가 복호화</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>기밀성</strong>(나만 읽게)</td>
+<td>받는 사람의 <strong>공개키</strong></td>
+<td>받는 사람의 <strong>개인키</strong></td>
+</tr>
+<tr>
+<td><strong>전자서명</strong>(내가 보냈음을 증명)</td>
+<td>보내는 사람의 <strong>개인키</strong></td>
+<td>누구나 보낸 사람의 <strong>공개키</strong>로 검증</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>해시 함수</strong>: 임의 길이 입력 → 고정 길이 출력, <strong>일방향</strong>(역산 불가), 충돌 저항성. 예: SHA-256 (MD5·SHA-1은 취약). 용도: 비밀번호 저장(+<strong>솔트</strong>), 무결성 확인.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>해시</th>
+<th>MAC (HMAC)</th>
+<th>전자서명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>키</td>
+<td>없음</td>
+<td><strong>공유 비밀키</strong></td>
+<td>개인키/공개키</td>
+</tr>
+<tr>
+<td>보장</td>
+<td>무결성(우연한 변경)</td>
+<td>무결성 + 출처 인증</td>
+<td>무결성 + 인증 + <strong>부인 방지</strong></td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>전자서명 절차</strong>: 메시지를 해시 → 해시값을 <strong>보낸 사람 개인키로 서명</strong> → 수신자는 공개키로 서명을 풀어 직접 계산한 해시와 비교.</li>
+<li><strong>PKI</strong>: 공개키가 진짜 그 사람 것임을 <strong>CA(인증기관)가 인증서로 보증</strong>하는 체계. 인증서 = 공개키 + 소유자 정보 + <strong>CA의 전자서명</strong>. 폐지 확인: CRL, OCSP.</li>
+<li><strong>정보보호 3요소(CIA)</strong>: 기밀성 · 무결성 · 가용성 (+ 인증, 부인 방지). DoS는 <strong>가용성</strong> 공격.</li>
+</ul>
+<hr />
+<h2 id="3-3-principles">3-3. 보안의 기본 원칙 <span class="badge badge-fire">🔥</span></h2>
+<h3 id="sec-t1">보안 3요소 (CIA) 와 확장</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>요소</th><th>의미</th><th>위협</th><th>대책</th></tr></thead>
+<tbody>
+<tr><td>기밀성 (Confidentiality)</td><td>인가된 사람만 <strong>볼 수 있다</strong></td><td>도청, 유출</td><td>암호화, 접근 통제</td></tr>
+<tr><td>무결성 (Integrity)</td><td>인가 없이 <strong>바뀌지 않는다</strong></td><td>변조, 위조</td><td>해시, MAC, 전자서명</td></tr>
+<tr><td>가용성 (Availability)</td><td>필요할 때 <strong>쓸 수 있다</strong></td><td>DoS, 장애</td><td>이중화, 백업, 부하 분산</td></tr>
+<tr><td>인증 (Authentication)</td><td>주체가 <strong>주장하는 그 사람</strong>이 맞다</td><td>위장</td><td>패스워드, 인증서, MFA</td></tr>
+<tr><td>부인 방지 (Non-repudiation)</td><td>한 일을 <strong>부정하지 못한다</strong></td><td>송수신 부인</td><td>전자서명, 로그</td></tr>
+</tbody></table></div>
+<h3 id="sec-t2">AAA</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>단계</th><th>질문</th><th>예</th></tr></thead>
+<tbody>
+<tr><td>인증 (Authentication)</td><td>누구인가?</td><td>로그인</td></tr>
+<tr><td>인가 (Authorization)</td><td>무엇을 할 수 있는가?</td><td>권한 검사</td></tr>
+<tr><td>계정 관리 (Accounting)</td><td>무엇을 했는가?</td><td>감사 로그</td></tr>
+</tbody></table></div>
+<h3 id="threat-vuln-risk">위협 · 취약점 · 위험</h3>
+<ul>
+<li><strong>자산</strong>: 보호할 가치가 있는 것 / <strong>위협</strong>: 손실을 일으킬 수 있는 원인 / <strong>취약점</strong>: 위협이 파고들 수 있는 약점</li>
+<li><strong>위험 = 자산 가치 × 위협 × 취약점</strong> (발생 가능성 × 영향도)</li>
+<li>위험 처리 4가지: <strong>감소</strong>(통제 적용), <strong>회피</strong>(해당 활동 중단), <strong>전가</strong>(보험·외주), <strong>수용</strong>(감수하고 근거를 남김)</li>
+</ul>
+<h3 id="security-design-principles">설계 원칙</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>원칙</th><th>내용</th></tr></thead>
+<tbody>
+<tr><td>최소 권한</td><td>일에 필요한 최소한의 권한만 부여</td></tr>
+<tr><td>직무 분리</td><td>한 사람이 승인과 실행을 모두 하지 못하게 분리</td></tr>
+<tr><td>심층 방어 (Defense in Depth)</td><td>한 겹이 뚫려도 다음 겹이 막도록 여러 층의 통제</td></tr>
+<tr><td>Fail-safe 기본값</td><td>판단할 수 없으면 <strong>거부</strong>가 기본</td></tr>
+<tr><td>완전한 중재</td><td>모든 접근을 매번 검사</td></tr>
+<tr><td>설계의 공개 (Kerckhoffs)</td><td>알고리즘이 공개되어도 <strong>키만 안전하면</strong> 안전해야 한다</td></tr>
+</tbody></table></div>
+<hr />
+<h2 id="3-4-crypto-practice">3-4. 대칭키 · 공개키 암호 실무 <span class="badge badge-fire">🔥</span></h2>
+<h3 id="sym-vs-asym">대칭키 vs 공개키</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>구분</th><th>대칭키</th><th>공개키 (비대칭키)</th></tr></thead>
+<tbody>
+<tr><td>키</td><td>암호화 = 복호화 (같은 키)</td><td>공개키 / 개인키 쌍</td></tr>
+<tr><td>속도</td><td>빠름</td><td>느림 (수백~수천 배)</td></tr>
+<tr><td>키 분배</td><td><strong>어렵다</strong> (안전한 채널 필요)</td><td>공개키는 공개해도 됨</td></tr>
+<tr><td>키 개수 (n명)</td><td>n(n−1)/2</td><td>2n</td></tr>
+<tr><td>알고리즘</td><td>AES, ChaCha20, (구) DES·3DES</td><td>RSA, ECC, Diffie-Hellman</td></tr>
+<tr><td>용도</td><td>데이터 암호화</td><td>키 교환, 전자서명</td></tr>
+</tbody></table></div>
+<ul>
+<li><strong>공개키의 두 방향</strong>: 수신자 <strong>공개키로 암호화</strong> → 수신자만 복호화(기밀성) / 송신자 <strong>개인키로 서명</strong> → 누구나 공개키로 검증(인증·부인 방지).</li>
+<li><strong>RSA</strong> 는 큰 수의 소인수분해, <strong>ECC</strong> 는 타원곡선 이산대수 문제의 어려움에 기댄다. ECC 는 같은 안전도를 훨씬 짧은 키로 낸다(ECC 256비트 ≈ RSA 3072비트).</li>
+<li><strong>Diffie-Hellman</strong>: 도청되는 채널에서도 양쪽이 같은 비밀 값을 만들어 낸다. 단독으로는 상대를 인증하지 못해 <strong>중간자 공격</strong>에 취약 → 인증서 서명과 결합한다.</li>
+</ul>
+<h3 id="block-modes">블록 암호 운용 모드</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>모드</th><th>방식</th><th>특징</th></tr></thead>
+<tbody>
+<tr><td>ECB</td><td>블록마다 독립 암호화</td><td><strong>같은 평문 블록 → 같은 암호문</strong>. 패턴이 드러나 사용 금지</td></tr>
+<tr><td>CBC</td><td>앞 암호문 블록과 XOR 후 암호화, <strong>IV</strong> 필요</td><td>병렬 암호화 불가, 패딩 오라클 공격 주의</td></tr>
+<tr><td>CTR</td><td>카운터를 암호화한 값과 XOR (스트림처럼 동작)</td><td>병렬 가능, 무결성 없음</td></tr>
+<tr><td><strong>GCM</strong></td><td>CTR + 인증 태그 (<strong>AEAD</strong>)</td><td>기밀성과 무결성을 함께. 현재 표준 선택</td></tr>
+</tbody></table></div>
+<ul>
+<li><strong>IV / Nonce 는 같은 키로 재사용하면 안 된다.</strong> 특히 GCM 에서 재사용하면 기밀성과 무결성이 함께 무너진다.</li>
+</ul>
+<h3 id="password-storage">패스워드 저장</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>방식</th><th>문제</th></tr></thead>
+<tbody>
+<tr><td>평문 저장</td><td>유출 즉시 전부 노출</td></tr>
+<tr><td>양방향 암호화</td><td>키가 함께 유출되면 복호화됨. 패스워드는 <strong>복호화할 필요가 없다</strong></td></tr>
+<tr><td>단순 해시 (SHA-256)</td><td>빠른 해시라 무차별 대입·<strong>레인보 테이블</strong>에 취약</td></tr>
+<tr><td>해시 + 솔트</td><td>레인보 테이블 무력화. 그러나 여전히 빠름</td></tr>
+<tr><td><strong>느린 해시 (bcrypt, scrypt, Argon2, PBKDF2)</strong></td><td>솔트 + <strong>키 스트레칭</strong>(반복·메모리 비용) → 대입 공격 비용을 높임. 권장</td></tr>
+</tbody></table></div>
+<ul>
+<li><strong>솔트(Salt)</strong>: 사용자마다 다른 임의 값을 붙여 해시. 같은 패스워드도 다른 해시가 되고 미리 계산한 표를 쓸 수 없다. 비밀일 필요는 없다.</li>
+<li><strong>페퍼(Pepper)</strong>: 모든 사용자에게 공통인 비밀 값을 DB 밖(환경 설정, HSM)에 따로 둔다.</li>
+</ul>
+<h3 id="encoding-encryption-hashing">인코딩 · 암호화 · 해싱 구분</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>구분</th><th>목적</th><th>되돌리기</th><th>키</th></tr></thead>
+<tbody>
+<tr><td>인코딩 (Base64, URL)</td><td>표현 형식 변환</td><td>누구나 가능</td><td>없음</td></tr>
+<tr><td>암호화 (AES, RSA)</td><td>기밀성</td><td>키가 있으면 가능</td><td>있음</td></tr>
+<tr><td>해싱 (SHA-256)</td><td>무결성, 지문</td><td><strong>불가능</strong> (일방향)</td><td>없음</td></tr>
+</tbody></table></div>
+<blockquote>
+<p>Base64 는 암호화가 아니다. JWT 의 페이로드는 Base64URL 인코딩일 뿐이므로 <strong>누구나 읽을 수 있다</strong>.</p>
+</blockquote>
+<hr />
+<h2 id="3-5-web-security">3-5. 웹 애플리케이션 보안 <span class="badge badge-fire">🔥</span></h2>
+<h3 id="owasp-top10">OWASP Top 10 (2021)</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>순위</th><th>항목</th><th>한 줄 설명</th></tr></thead>
+<tbody>
+<tr><td>A01</td><td>접근 통제 실패</td><td>권한 없는 기능·데이터에 접근 (IDOR, 관리자 URL 직접 호출)</td></tr>
+<tr><td>A02</td><td>암호화 실패</td><td>평문 전송·저장, 약한 알고리즘</td></tr>
+<tr><td>A03</td><td>인젝션</td><td>SQL·OS 명령·LDAP 삽입, XSS 포함</td></tr>
+<tr><td>A04</td><td>안전하지 않은 설계</td><td>위협 모델링 없는 설계 결함</td></tr>
+<tr><td>A05</td><td>보안 설정 오류</td><td>기본 계정, 불필요한 기능, 상세 오류 노출</td></tr>
+<tr><td>A06</td><td>취약하고 오래된 구성 요소</td><td>알려진 취약점이 있는 라이브러리</td></tr>
+<tr><td>A07</td><td>식별·인증 실패</td><td>약한 패스워드 정책, 세션 관리 결함</td></tr>
+<tr><td>A08</td><td>소프트웨어·데이터 무결성 실패</td><td>검증 없는 업데이트·역직렬화, CI/CD 변조</td></tr>
+<tr><td>A09</td><td>로깅·모니터링 실패</td><td>침해를 탐지하지 못함</td></tr>
+<tr><td>A10</td><td>SSRF</td><td>서버가 공격자가 지정한 주소로 요청</td></tr>
+</tbody></table></div>
+<blockquote>
+<p>2025년판에서는 <strong>소프트웨어 공급망 실패</strong>와 <strong>예외 상황의 잘못된 처리</strong>가 별도 항목으로 올라왔다. 접근 통제 실패가 1위인 점은 같다.</p>
+</blockquote>
+<h3 id="sql-injection">SQL 인젝션</h3>
+<pre><code class="language-java">// 취약: 입력이 SQL 문장의 일부가 된다
+String sql = "SELECT * FROM users WHERE id = '" + id + "' AND pw = '" + pw + "'";
+// id 에  admin' --  를 넣으면 뒤 조건이 주석 처리된다
+
+// 안전: 구조와 값을 분리 (PreparedStatement, 바인딩)
+PreparedStatement ps = conn.prepareStatement("SELECT * FROM users WHERE id = ? AND pw = ?");
+ps.setString(1, id);
+ps.setString(2, pw);
+</code></pre>
+<div class="table-wrap"><table>
+<thead><tr><th>대책</th><th>내용</th></tr></thead>
+<tbody>
+<tr><td><strong>매개변수 바인딩</strong></td><td>SQL 구조가 먼저 확정되므로 입력은 항상 값으로만 취급된다. 근본 대책</td></tr>
+<tr><td>입력 검증</td><td>화이트리스트 기반. 정렬 컬럼명처럼 바인딩할 수 없는 부분에 필수</td></tr>
+<tr><td>최소 권한 DB 계정</td><td>뚫려도 피해 범위 제한</td></tr>
+<tr><td>오류 메시지 은닉</td><td>DB 구조 노출 방지</td></tr>
+</tbody></table></div>
+<h3 id="xss-csrf-ssrf">XSS · CSRF · SSRF</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>구분</th><th>XSS</th><th>CSRF</th><th>SSRF</th></tr></thead>
+<tbody>
+<tr><td>공격 대상</td><td><strong>사용자의 브라우저</strong></td><td>사용자의 <strong>인증된 세션</strong></td><td><strong>서버의 내부망</strong></td></tr>
+<tr><td>원리</td><td>악성 스크립트가 피해자 브라우저에서 실행</td><td>피해자가 모르게 인증된 요청을 보내게 함</td><td>서버가 공격자가 준 URL 로 요청</td></tr>
+<tr><td>악용하는 신뢰</td><td>사용자가 사이트를 신뢰</td><td>사이트가 브라우저(쿠키)를 신뢰</td><td>내부망이 서버를 신뢰</td></tr>
+<tr><td>대책</td><td>출력 이스케이프, CSP, HttpOnly 쿠키</td><td>CSRF 토큰, SameSite 쿠키, 재인증</td><td>URL 화이트리스트, 내부 IP 차단, 메타데이터 주소 차단</td></tr>
+</tbody></table></div>
+<ul>
+<li>XSS 유형: <strong>저장형</strong>(게시글에 저장되어 보는 사람 모두 피해), <strong>반사형</strong>(URL 파라미터가 응답에 그대로 반영), <strong>DOM 기반</strong>(클라이언트 스크립트가 DOM 에 삽입).</li>
+<li>XSS 와 CSRF 의 서술형 비교는 → <a href="#xss-vs-csrf">XSS vs CSRF</a></li>
+</ul>
+<h3 id="web-vulns-etc">그 밖의 주요 취약점</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>취약점</th><th>내용</th><th>대책</th></tr></thead>
+<tbody>
+<tr><td>IDOR (안전하지 않은 직접 객체 참조)</td><td><code>/orders/1001</code> 을 <code>1002</code> 로 바꿔 남의 주문 조회</td><td><strong>서버에서 소유권 검사</strong></td></tr>
+<tr><td>파일 업로드</td><td>웹셸을 올려 실행</td><td>확장자·내용 검증, 실행 권한 없는 저장소, 파일명 재생성</td></tr>
+<tr><td>경로 조작</td><td><code>../../etc/passwd</code></td><td>경로 정규화 후 기준 디렉터리 검사</td></tr>
+<tr><td>세션 하이재킹</td><td>세션 ID 탈취</td><td>HTTPS, HttpOnly·Secure, 로그인 시 세션 ID 재발급</td></tr>
+<tr><td>세션 고정</td><td>공격자가 정한 세션 ID 로 로그인하게 유도</td><td>로그인 성공 시 <strong>세션 ID 재발급</strong></td></tr>
+<tr><td>안전하지 않은 역직렬화</td><td>조작된 객체가 복원되며 코드 실행</td><td>신뢰할 수 없는 데이터 역직렬화 금지, 타입 제한</td></tr>
+<tr><td>무차별 대입 · 크리덴셜 스터핑</td><td>유출된 계정 목록 대입</td><td>시도 횟수 제한, MFA, CAPTCHA</td></tr>
+</tbody></table></div>
+<blockquote>
+<p>공통 원칙: <strong>클라이언트에서 온 값은 모두 믿지 않는다.</strong> 화면에서 버튼을 숨기는 것은 통제가 아니다. 검증과 권한 검사는 반드시 <strong>서버</strong>에서 한다.</p>
+</blockquote>
+<hr />
+<h2 id="3-6-access-control">3-6. 인증 · 접근 통제 모델 <span class="badge badge-star">⭐</span></h2>
+<h3 id="auth-factors">인증 요소</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>요소</th><th>예</th></tr></thead>
+<tbody>
+<tr><td>지식 (아는 것)</td><td>패스워드, PIN</td></tr>
+<tr><td>소유 (가진 것)</td><td>OTP 기기, 스마트폰, 인증서, 보안 키</td></tr>
+<tr><td>존재 (자신인 것)</td><td>지문, 홍채, 얼굴</td></tr>
+<tr><td>행위 (하는 것)</td><td>서명, 키 입력 패턴</td></tr>
+</tbody></table></div>
+<ul>
+<li><strong>다중 요소 인증(MFA)</strong>: <strong>서로 다른 종류</strong>의 요소를 둘 이상 조합. 패스워드 + 보안 질문은 둘 다 지식이라 MFA 가 아니다.</li>
+<li><strong>SSO</strong>: 한 번 로그인으로 여러 시스템 이용. 편의성이 높지만 그 계정이 뚫리면 전체가 뚫린다. 구현 표준은 SAML, OIDC.</li>
+</ul>
+<h3 id="access-control-models">접근 통제 정책</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>모델</th><th>누가 권한을 정하나</th><th>기준</th><th>특징</th></tr></thead>
+<tbody>
+<tr><td>DAC (임의적)</td><td><strong>자원 소유자</strong></td><td>신원</td><td>유연, 통제가 느슨 (리눅스 파일 권한)</td></tr>
+<tr><td>MAC (강제적)</td><td><strong>시스템(관리자)</strong></td><td>보안 등급</td><td>엄격, 군·정부 (SELinux)</td></tr>
+<tr><td>RBAC (역할 기반)</td><td>관리자</td><td><strong>역할</strong></td><td>사용자 ↔ 역할 ↔ 권한. 기업 표준</td></tr>
+<tr><td>ABAC (속성 기반)</td><td>정책</td><td>사용자·자원·환경 <strong>속성</strong></td><td>세밀, 정책이 복잡</td></tr>
+</tbody></table></div>
+<h3 id="security-models">보안 모델</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>모델</th><th>목표</th><th>규칙</th></tr></thead>
+<tbody>
+<tr><td>Bell-LaPadula</td><td><strong>기밀성</strong></td><td>No Read Up (상위 등급 읽기 금지), No Write Down (하위 등급 쓰기 금지)</td></tr>
+<tr><td>Biba</td><td><strong>무결성</strong></td><td>No Read Down, No Write Up</td></tr>
+<tr><td>Clark-Wilson</td><td>무결성 (상업용)</td><td>정해진 절차(트랜잭션)로만 변경, 직무 분리</td></tr>
+</tbody></table></div>
+<blockquote>
+<p>암기: BLP 는 "위를 훔쳐보지 말고 아래로 흘리지 말라", Biba 는 정확히 그 반대 방향.</p>
+</blockquote>
+<hr />
+<h2 id="3-7-security-arch">3-7. 보안 장비 · 망 구성 <span class="badge badge-star">⭐</span></h2>
+<h3 id="fw-ids-ips-waf">방화벽 · IDS · IPS · WAF</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>장비</th><th>계층</th><th>하는 일</th><th>한계</th></tr></thead>
+<tbody>
+<tr><td>방화벽</td><td>L3~L4</td><td>IP·포트·프로토콜 규칙으로 허용/차단</td><td>허용된 포트 안의 공격은 못 봄</td></tr>
+<tr><td>IDS</td><td>L3~L7</td><td>침입을 <strong>탐지</strong>해 알림 (복사본을 분석)</td><td>차단하지 않음</td></tr>
+<tr><td>IPS</td><td>L3~L7</td><td>탐지하고 <strong>차단</strong> (통신 경로에 직접 위치)</td><td>오탐 시 정상 트래픽 차단, 병목</td></tr>
+<tr><td>WAF</td><td>L7</td><td>HTTP 요청 내용을 보고 SQL 인젝션·XSS 등 차단</td><td>웹 트래픽 전용</td></tr>
+</tbody></table></div>
+<div class="table-wrap"><table>
+<thead><tr><th>방화벽 종류</th><th>동작</th></tr></thead>
+<tbody>
+<tr><td>패킷 필터링</td><td>패킷 하나하나를 헤더 규칙과 대조 (상태 없음)</td></tr>
+<tr><td>상태 기반 검사 (Stateful)</td><td><strong>연결 상태 테이블</strong>을 유지, 맺어진 연결의 응답만 통과</td></tr>
+<tr><td>애플리케이션 게이트웨이 (프록시)</td><td>응용 계층에서 대신 접속</td></tr>
+<tr><td>차세대 방화벽 (NGFW)</td><td>애플리케이션 식별, IPS, 사용자 기반 정책 통합</td></tr>
+</tbody></table></div>
+<p><strong>탐지 방식</strong></p>
+<div class="table-wrap"><table>
+<thead><tr><th>방식</th><th>원리</th><th>장점</th><th>단점</th></tr></thead>
+<tbody>
+<tr><td>오용 탐지 (시그니처)</td><td>알려진 공격 패턴과 비교</td><td>오탐이 적음</td><td><strong>알려지지 않은 공격</strong>(제로데이) 탐지 불가</td></tr>
+<tr><td>이상 탐지 (행위 기반)</td><td>정상 기준선에서 벗어나면 탐지</td><td>새로운 공격 탐지 가능</td><td><strong>오탐이 많음</strong></td></tr>
+</tbody></table></div>
+<ul>
+<li>오탐(False Positive): 정상을 공격으로 판단 / 미탐(False Negative): 공격을 놓침.</li>
+</ul>
+<h3 id="dmz-segmentation">DMZ · 망분리</h3>
+<pre><code>인터넷 ── [외부 방화벽] ── DMZ (웹 서버, 메일, DNS) ── [내부 방화벽] ── 내부망 (WAS, DB, 업무 PC)
+</code></pre>
+<ul>
+<li><strong>DMZ</strong>: 외부에 공개해야 하는 서버를 두는 완충 구역. DMZ 가 침해되어도 내부망으로 바로 들어가지 못한다.</li>
+<li><strong>망분리</strong>: 업무망과 인터넷망을 분리해 인터넷을 통한 악성코드 유입과 내부 정보 유출을 막는다.</li>
+</ul>
+<div class="table-wrap"><table>
+<thead><tr><th>구분</th><th>물리적 망분리</th><th>논리적 망분리</th></tr></thead>
+<tbody>
+<tr><td>방식</td><td>PC 2대, 네트워크 회선 분리</td><td>가상화(VDI, 서버 기반 컴퓨팅 등)로 분리</td></tr>
+<tr><td>보안성</td><td>높음</td><td>상대적으로 낮음 (가상화 계층 취약점)</td></tr>
+<tr><td>비용·편의</td><td>비용 큼, 불편</td><td>비용 작음, 편리</td></tr>
+</tbody></table></div>
+<ul>
+<li>망 사이 자료 이동은 <strong>망연계 솔루션</strong>(승인·악성코드 검사·로그)을 거친다.</li>
+<li>클라우드·AI 활용 요구가 커지면서 일률적 분리에서 <strong>데이터 중요도에 따른 차등 통제</strong>로 옮겨 가는 추세다.</li>
+</ul>
+<h3 id="zero-trust">제로 트러스트</h3>
+<p>전통 모델은 "내부망은 믿는다(경계 보안)". 그러나 재택근무·클라우드로 경계가 흐려졌고, 한번 들어온 공격자는 내부에서 자유롭게 움직였다(횡적 이동).</p>
+<p>→ <strong>"아무것도 믿지 말고 항상 검증하라."</strong></p>
+<div class="table-wrap"><table>
+<thead><tr><th>원칙</th><th>내용</th></tr></thead>
+<tbody>
+<tr><td>지속적 검증</td><td>위치와 무관하게 <strong>매 접근마다</strong> 사용자·기기·맥락을 인증·인가</td></tr>
+<tr><td>최소 권한</td><td>필요한 자원에만, 필요한 시간만</td></tr>
+<tr><td>마이크로 세그멘테이션</td><td>망을 잘게 나눠 횡적 이동 차단</td></tr>
+<tr><td>침해 가정</td><td>이미 뚫렸다고 보고 모니터링·로그를 설계</td></tr>
+</tbody></table></div>
+<h3 id="soc-tools">관제 · 엔드포인트</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>용어</th><th>역할</th></tr></thead>
+<tbody>
+<tr><td>SIEM</td><td>여러 장비의 로그를 모아 <strong>상관 분석</strong>으로 위협 탐지</td></tr>
+<tr><td>SOAR</td><td>탐지 후 대응 절차를 <strong>자동화</strong></td></tr>
+<tr><td>EDR</td><td>단말의 행위를 기록·분석해 탐지·격리</td></tr>
+<tr><td>DLP</td><td>중요 정보의 외부 반출을 탐지·차단</td></tr>
+<tr><td>NAC</td><td>단말의 인증·보안 상태를 확인하고 네트워크 접속 허용</td></tr>
+<tr><td>HSM</td><td>암호 키를 하드웨어 안에서 생성·보관·연산</td></tr>
+</tbody></table></div>
+<hr />
+<h2 id="3-8-malware">3-8. 악성코드 · 시스템 공격 <span class="badge badge-star">⭐</span></h2>
+<h3 id="malware-types">악성코드 분류</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>종류</th><th>특징</th></tr></thead>
+<tbody>
+<tr><td>바이러스</td><td>다른 파일에 <strong>기생</strong>, 사용자가 실행해야 전파</td></tr>
+<tr><td>웜</td><td><strong>스스로 복제</strong>해 네트워크로 전파 (숙주 불필요)</td></tr>
+<tr><td>트로이 목마</td><td>정상 프로그램으로 <strong>위장</strong>, 자기 복제 없음</td></tr>
+<tr><td>랜섬웨어</td><td>파일을 암호화하고 금전 요구. 대책의 핵심은 <strong>오프라인 백업</strong></td></tr>
+<tr><td>스파이웨어 · 키로거</td><td>정보·키 입력 수집</td></tr>
+<tr><td>루트킷</td><td>커널·시스템 깊숙이 숨어 <strong>존재를 은폐</strong></td></tr>
+<tr><td>백도어</td><td>정상 인증을 우회하는 통로</td></tr>
+<tr><td>봇넷</td><td>감염된 다수 기기를 C&amp;C 서버가 원격 조종 (DDoS 에 사용)</td></tr>
+</tbody></table></div>
+<ul>
+<li><strong>APT(지능형 지속 위협)</strong>: 특정 조직을 겨냥해 장기간 은밀히 침투. 단계 — 정찰 → 초기 침투(스피어 피싱) → 거점 확보 → 권한 상승 → 내부 이동 → 정보 유출.</li>
+<li><strong>제로데이 공격</strong>: 패치가 나오기 전의 취약점을 이용.</li>
+<li><strong>공급망 공격</strong>: 대상이 신뢰하는 <strong>소프트웨어 공급자·라이브러리·업데이트 경로</strong>를 오염. 대책 — 의존성 검증, SBOM, 서명 확인.</li>
+</ul>
+<h3 id="memory-attacks">메모리 공격과 방어</h3>
+<p><strong>버퍼 오버플로</strong>: 버퍼 크기를 넘겨 써서 인접 메모리(특히 스택의 <strong>복귀 주소</strong>)를 덮어쓴다.</p>
+<pre><code class="language-c">void f(char *input) {
+    char buf[16];
+    strcpy(buf, input);   // 길이 검사 없음 → 16바이트를 넘으면 복귀 주소까지 덮어씀
+}
+</code></pre>
+<div class="table-wrap"><table>
+<thead><tr><th>방어</th><th>원리</th></tr></thead>
+<tbody>
+<tr><td>안전한 함수</td><td><code>strcpy</code> → <code>strncpy</code>/<code>strlcpy</code>, <code>gets</code> 사용 금지, 길이 검사</td></tr>
+<tr><td>스택 카나리</td><td>복귀 주소 앞에 임의 값을 두고 함수 복귀 전에 변조 여부 검사</td></tr>
+<tr><td>DEP / NX</td><td>스택·힙을 <strong>실행 불가</strong>로 표시</td></tr>
+<tr><td>ASLR</td><td>스택·힙·라이브러리 주소를 실행마다 <strong>무작위화</strong></td></tr>
+<tr><td>메모리 안전 언어</td><td>Java, Rust 등은 경계 검사를 언어 수준에서 강제</td></tr>
+</tbody></table></div>
+<div class="table-wrap"><table>
+<thead><tr><th>그 밖의 공격</th><th>내용</th></tr></thead>
+<tbody>
+<tr><td>포맷 스트링</td><td><code>printf(input)</code> 처럼 입력을 형식 문자열로 사용 → 메모리 읽기·쓰기</td></tr>
+<tr><td>경쟁 조건 (TOCTOU)</td><td>검사 시점과 사용 시점 사이에 대상을 바꿔치기</td></tr>
+<tr><td>권한 상승</td><td>일반 권한에서 관리자 권한 획득</td></tr>
+<tr><td>사이드 채널</td><td>시간·전력·캐시 동작 같은 부수 정보로 비밀 추론 (Spectre, Meltdown)</td></tr>
+</tbody></table></div>
+<h3 id="password-attacks">패스워드 공격</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>공격</th><th>방식</th><th>대책</th></tr></thead>
+<tbody>
+<tr><td>무차별 대입</td><td>모든 조합 시도</td><td>길이·복잡도, 시도 제한</td></tr>
+<tr><td>사전 공격</td><td>자주 쓰는 단어 목록 시도</td><td>흔한 패스워드 금지</td></tr>
+<tr><td>레인보 테이블</td><td>미리 계산한 해시 표 조회</td><td>솔트</td></tr>
+<tr><td>크리덴셜 스터핑</td><td>다른 사이트에서 유출된 계정 대입</td><td>MFA, 유출 계정 탐지</td></tr>
+</tbody></table></div>
+<hr />
+<h2 id="3-9-privacy-ir">3-9. 개인정보 보호 · 침해 대응 · 업무 연속성 <span class="badge badge-star">⭐</span></h2>
+<h3 id="deidentification">개인정보 비식별화</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>구분</th><th>정의</th><th>활용</th></tr></thead>
+<tbody>
+<tr><td>개인정보</td><td>특정 개인을 알아볼 수 있는 정보</td><td>동의 필요</td></tr>
+<tr><td><strong>가명정보</strong></td><td><strong>추가 정보 없이는</strong> 특정 개인을 알아볼 수 없게 처리</td><td>통계 작성·연구·공익적 기록 보존 목적은 동의 없이 가능</td></tr>
+<tr><td><strong>익명정보</strong></td><td>다른 정보를 써도 <strong>더 이상 알아볼 수 없음</strong></td><td>개인정보가 아님 → 제한 없음</td></tr>
+</tbody></table></div>
+<div class="table-wrap"><table>
+<thead><tr><th>기법</th><th>예</th></tr></thead>
+<tbody>
+<tr><td>가명 처리</td><td>홍길동 → 사용자A</td></tr>
+<tr><td>총계 처리</td><td>개별 값 대신 합계·평균</td></tr>
+<tr><td>데이터 삭제</td><td>주민번호 뒷자리 삭제</td></tr>
+<tr><td>범주화</td><td>37세 → 30대</td></tr>
+<tr><td>마스킹</td><td>010-****-1234</td></tr>
+</tbody></table></div>
+<div class="table-wrap"><table>
+<thead><tr><th>프라이버시 모델</th><th>조건</th></tr></thead>
+<tbody>
+<tr><td>k-익명성</td><td>같은 속성 조합의 레코드가 <strong>k개 이상</strong> → 특정 불가</td></tr>
+<tr><td>l-다양성</td><td>각 동질 집합의 민감 정보가 <strong>l종류 이상</strong> → 동질성 공격 방어</td></tr>
+<tr><td>t-근접성</td><td>동질 집합의 민감 정보 분포가 전체 분포와 t 이하 차이</td></tr>
+<tr><td>차분 프라이버시</td><td>결과에 <strong>잡음</strong>을 더해 한 사람의 포함 여부를 알 수 없게 함</td></tr>
+</tbody></table></div>
+<h3 id="incident-response">침해 사고 대응 절차</h3>
+<ol>
+<li><strong>준비</strong>: 대응 조직, 절차, 도구, 훈련</li>
+<li><strong>탐지·분석</strong>: 이상 징후 확인, 범위·영향 파악</li>
+<li><strong>봉쇄</strong>: 확산 차단 (격리, 계정 잠금). <strong>증거 보존</strong>을 먼저 고려</li>
+<li><strong>제거</strong>: 악성코드·백도어 제거, 취약점 패치</li>
+<li><strong>복구</strong>: 서비스 정상화, 모니터링 강화</li>
+<li><strong>사후 활동</strong>: 원인 분석, 재발 방지, 보고</li>
+</ol>
+<ul>
+<li><strong>디지털 포렌식 원칙</strong>: 정당성, 재현성, 신속성, <strong>연계 보관성(Chain of Custody)</strong>, 무결성. 휘발성이 높은 증거(메모리 → 네트워크 상태 → 디스크)부터 수집한다.</li>
+</ul>
+<h3 id="bcp-drp">업무 연속성 · 재해 복구</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>지표</th><th>의미</th><th>결정하는 것</th></tr></thead>
+<tbody>
+<tr><td><strong>RTO</strong> (복구 시간 목표)</td><td>장애 후 <strong>얼마 안에</strong> 복구해야 하는가</td><td>재해 복구 센터의 수준</td></tr>
+<tr><td><strong>RPO</strong> (복구 시점 목표)</td><td><strong>어느 시점까지의 데이터</strong>를 되살려야 하는가 (허용 손실량)</td><td>백업·복제 주기</td></tr>
+</tbody></table></div>
+<div class="table-wrap"><table>
+<thead><tr><th>DR 센터</th><th>구성</th><th>RTO</th></tr></thead>
+<tbody>
+<tr><td>Mirror Site</td><td>실시간 동기화, 동시 운영 (Active-Active)</td><td>즉시</td></tr>
+<tr><td>Hot Site</td><td>동일 장비 대기, 실시간/비동기 복제 (Active-Standby)</td><td>수 시간</td></tr>
+<tr><td>Warm Site</td><td>중요 장비만 보유</td><td>수일</td></tr>
+<tr><td>Cold Site</td><td>공간·전원만 확보</td><td>수주</td></tr>
+</tbody></table></div>
+<div class="table-wrap"><table>
+<thead><tr><th>백업 방식</th><th>대상</th><th>백업 속도</th><th>복구</th></tr></thead>
+<tbody>
+<tr><td>전체 백업</td><td>모든 데이터</td><td>느림</td><td>가장 빠름 (1개)</td></tr>
+<tr><td>증분 백업</td><td><strong>직전 백업</strong> 이후 변경분</td><td>가장 빠름</td><td>전체 + 모든 증분 필요</td></tr>
+<tr><td>차등 백업</td><td><strong>마지막 전체 백업</strong> 이후 변경분</td><td>중간</td><td>전체 + 마지막 차등</td></tr>
+</tbody></table></div>
+<ul>
+<li><strong>3-2-1 원칙</strong>: 사본 3개, 서로 다른 매체 2종, 1개는 외부(오프사이트). 랜섬웨어 대비로 <strong>변경 불가(immutable) 또는 오프라인</strong> 사본을 추가한다.</li>
+<li>백업은 <strong>복구 훈련</strong>을 해 봐야 의미가 있다. 복구해 본 적 없는 백업은 백업이 아니다.</li>
+</ul>
+</div>

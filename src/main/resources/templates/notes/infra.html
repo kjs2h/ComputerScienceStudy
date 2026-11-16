@@ -1,0 +1,540 @@
+<div class="note-body" th:fragment="content" th:inline="none" xmlns:th="http://www.thymeleaf.org">
+<h1 id="part-12">Part 12. 클라우드 · DevOps · 인프라</h1>
+<pre><code>클라우드 · DevOps · 인프라
+├─ 1. 리눅스 실무                    🔥 🧮
+├─ 2. Git 실무                      🔥
+├─ 3. 컨테이너 — Docker              🔥
+├─ 4. Kubernetes                   ⭐
+├─ 5. CI/CD · 배포 전략              🔥
+├─ 6. 클라우드 서비스 구성            ⭐
+└─ 7. 관측성 · 장애 대응              🔥 🧮
+</code></pre>
+<hr />
+<h2 id="12-1-linux">12-1. 리눅스 실무 <span class="badge badge-fire">🔥</span> <span class="badge badge-calc">🧮</span></h2>
+<h3 id="linux-permission">파일 권한</h3>
+<pre><code>-rwxr-xr--  1  alice  dev  4096  app.sh
+│└┬┘└┬┘└┬┘
+│ │  │  └─ 기타 사용자 (other):  r--  = 4
+│ │  └──── 그룹 (group):        r-x  = 5
+│ └─────── 소유자 (user):       rwx  = 7
+└───────── 파일 종류 (- 일반, d 디렉터리, l 심볼릭 링크)
+</code></pre>
+<div class="table-wrap"><table>
+<thead><tr><th>권한</th><th>값</th><th>파일에서</th><th>디렉터리에서</th></tr></thead>
+<tbody>
+<tr><td>r (읽기)</td><td>4</td><td>내용 읽기</td><td>목록 보기 (<code>ls</code>)</td></tr>
+<tr><td>w (쓰기)</td><td>2</td><td>내용 수정</td><td>안의 파일 <strong>생성·삭제·이름 변경</strong></td></tr>
+<tr><td>x (실행)</td><td>1</td><td>실행</td><td><strong>진입</strong> (<code>cd</code>), 안의 파일에 접근</td></tr>
+</tbody></table></div>
+<div class="calc-ex">
+<p><strong>예제.</strong> (1) <code>chmod 640 secret.txt</code> 의 의미는? (2) umask 가 <code>027</code> 일 때 새로 만든 파일과 디렉터리의 권한은?</p>
+<details><summary>풀이</summary>
+<ol>
+<li>6 = rw-, 4 = r--, 0 = --- → 소유자는 읽기·쓰기, 그룹은 읽기, 기타는 접근 불가.</li>
+<li>기본 권한에서 umask 비트를 <strong>제거</strong>한다. 파일의 기본은 666, 디렉터리의 기본은 777.</li>
+<ul>
+<li>파일: 666 에서 027 제거 → <strong>640</strong> (rw-r-----)</li>
+<li>디렉터리: 777 에서 027 제거 → <strong>750</strong> (rwxr-x---)</li>
+<li>단순 뺄셈이 아니라 비트 연산(기본 AND NOT umask)이다. 예: umask 033 → 파일은 666 − 033 = 633 이 아니라 <strong>644</strong>.</li>
+</ul>
+</ol>
+</details>
+</div>
+<div class="table-wrap"><table>
+<thead><tr><th>특수 권한</th><th>효과</th><th>예</th></tr></thead>
+<tbody>
+<tr><td>SetUID (4000)</td><td>실행하는 동안 <strong>파일 소유자</strong> 권한으로 동작</td><td><code>passwd</code></td></tr>
+<tr><td>SetGID (2000)</td><td>그룹 권한으로 동작. 디렉터리에서는 새 파일이 그 그룹을 상속</td><td>공유 디렉터리</td></tr>
+<tr><td>Sticky bit (1000)</td><td>디렉터리 안의 파일을 <strong>소유자만</strong> 삭제 가능</td><td><code>/tmp</code></td></tr>
+</tbody></table></div>
+<ul>
+<li><code>chown user:group file</code> (소유자 변경), <code>chmod u+x file</code> (기호 방식), <code>sudo</code> (관리자 권한으로 실행).</li>
+</ul>
+<h3 id="linux-commands">목적별 명령</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>하고 싶은 일</th><th>명령</th></tr></thead>
+<tbody>
+<tr><td>파일 찾기</td><td><code>find /var/log -name "*.log" -mtime -1</code></td></tr>
+<tr><td>내용 검색</td><td><code>grep -rn "ERROR" ./logs</code> , <code>grep -c</code>, <code>grep -v</code> (제외)</td></tr>
+<tr><td>실시간 로그 보기</td><td><code>tail -f app.log</code> , <code>tail -n 100</code></td></tr>
+<tr><td>큰 파일 살펴보기</td><td><code>less</code>, <code>head -n 20</code></td></tr>
+<tr><td>디스크 사용량</td><td><code>df -h</code> (파일 시스템별), <code>du -sh *</code> (디렉터리별)</td></tr>
+<tr><td>메모리</td><td><code>free -h</code></td></tr>
+<tr><td>프로세스</td><td><code>ps -ef</code>, <code>top</code> / <code>htop</code>, <code>pgrep java</code></td></tr>
+<tr><td>프로세스 종료</td><td><code>kill &lt;pid&gt;</code> (SIGTERM) → 안 되면 <code>kill -9 &lt;pid&gt;</code> (SIGKILL)</td></tr>
+<tr><td>포트 점유 확인</td><td><code>ss -tlnp</code> , <code>lsof -i :8080</code></td></tr>
+<tr><td>네트워크 확인</td><td><code>curl -v</code>, <code>ping</code>, <code>dig</code>, <code>traceroute</code></td></tr>
+<tr><td>열린 파일</td><td><code>lsof -p &lt;pid&gt;</code></td></tr>
+<tr><td>서비스 관리</td><td><code>systemctl status|start|stop|restart nginx</code>, <code>journalctl -u nginx -f</code></td></tr>
+<tr><td>압축</td><td><code>tar -czf out.tar.gz dir/</code> , <code>tar -xzf out.tar.gz</code></td></tr>
+<tr><td>원격 접속·복사</td><td><code>ssh user@host</code>, <code>scp file user@host:/path</code>, <code>rsync -av</code></td></tr>
+<tr><td>예약 실행</td><td><code>crontab -e</code> — <code>분 시 일 월 요일 명령</code></td></tr>
+</tbody></table></div>
+<h3 id="pipe-redirect">파이프 · 리다이렉션</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>기호</th><th>의미</th></tr></thead>
+<tbody>
+<tr><td><code>a | b</code></td><td>a 의 표준 출력을 b 의 표준 입력으로</td></tr>
+<tr><td><code>&gt; file</code> / <code>&gt;&gt; file</code></td><td>표준 출력을 파일에 덮어쓰기 / 이어 쓰기</td></tr>
+<tr><td><code>2&gt; file</code></td><td>표준 에러를 파일로</td></tr>
+<tr><td><code>&gt; out.log 2&gt;&amp;1</code></td><td>표준 출력과 에러를 <strong>모두</strong> 같은 파일로</td></tr>
+<tr><td><code>&lt; file</code></td><td>파일을 표준 입력으로</td></tr>
+<tr><td><code>a &amp;&amp; b</code> / <code>a || b</code></td><td>a 가 성공하면 b / a 가 실패하면 b</td></tr>
+<tr><td><code>cmd &amp;</code> , <code>nohup cmd &amp;</code></td><td>백그라운드 실행 / 터미널을 닫아도 계속 실행</td></tr>
+</tbody></table></div>
+<pre><code class="language-bash"># 접근 로그에서 요청이 많은 IP 상위 10개
+awk '{print $1}' access.log | sort | uniq -c | sort -rn | head -10
+
+# 최근 1,000줄에서 5xx 응답 건수
+tail -n 1000 access.log | awk '$9 &gt;= 500' | wc -l
+</code></pre>
+<h3 id="linux-load">부하 지표 읽기</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>지표</th><th>의미</th><th>해석</th></tr></thead>
+<tbody>
+<tr><td>load average</td><td>실행 중이거나 실행 대기 중인 작업 수의 1·5·15분 평균</td><td><strong>코어 수</strong>보다 크면 대기가 쌓이는 중</td></tr>
+<tr><td><code>us</code> / <code>sy</code></td><td>사용자 코드 / 커널 코드 CPU 비율</td><td><code>sy</code> 가 높으면 시스템 콜·문맥 교환 과다</td></tr>
+<tr><td><code>wa</code> (iowait)</td><td>I/O 를 기다리느라 CPU 가 논 비율</td><td>높으면 디스크 병목</td></tr>
+<tr><td><code>st</code> (steal)</td><td>하이퍼바이저가 다른 VM 에 CPU 를 준 비율</td><td>높으면 이웃 VM 의 영향</td></tr>
+<tr><td>RSS / VSZ</td><td>실제 사용 중인 물리 메모리 / 가상 메모리 크기</td><td>누수는 RSS 의 지속 증가로 확인</td></tr>
+<tr><td><code>buff/cache</code></td><td>페이지 캐시로 쓰는 메모리</td><td>필요하면 회수되므로 <strong>부족한 것이 아니다</strong>. <code>available</code> 을 본다</td></tr>
+</tbody></table></div>
+<h3 id="ssh-key">SSH 키 인증</h3>
+<ol>
+<li>클라이언트에서 키 쌍 생성(<code>ssh-keygen</code>). <strong>개인키</strong>는 내 컴퓨터에, <strong>공개키</strong>는 서버의 <code>~/.ssh/authorized_keys</code> 에 둔다.</li>
+<li>접속 시 서버가 임의 값을 보내고, 클라이언트가 개인키로 서명해 돌려준다.</li>
+<li>서버가 공개키로 검증한다. 패스워드가 네트워크로 전달되지 않는다.</li>
+</ol>
+<ul>
+<li>운영 서버는 패스워드 로그인과 root 직접 로그인을 막고, <strong>배스천(점프) 호스트</strong>를 거쳐 접속하게 한다.</li>
+</ul>
+<hr />
+<h2 id="12-2-git">12-2. Git 실무 <span class="badge badge-fire">🔥</span></h2>
+<h3 id="git-areas">세 영역과 기본 흐름</h3>
+<pre><code>작업 디렉터리 ──git add──▶ 스테이징 영역 ──git commit──▶ 로컬 저장소 ──git push──▶ 원격 저장소
+      ◀────────────────── git restore / checkout ─────────────  ◀──── git fetch / pull ────
+</code></pre>
+<ul>
+<li>Git 은 변경분(diff)이 아니라 <strong>스냅샷</strong>을 저장하고, 커밋은 부모 커밋을 가리킨다. 브랜치는 <strong>커밋을 가리키는 포인터</strong>일 뿐이라 만들고 지우는 비용이 거의 없다.</li>
+<li><code>git pull</code> = <code>git fetch</code> + <code>git merge</code>. 형상 관리의 개념과 Git/SVN 비교는 → <a href="#7-6-scm">형상관리</a></li>
+</ul>
+<h3 id="merge-vs-rebase">merge vs rebase</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>구분</th><th>merge</th><th>rebase</th></tr></thead>
+<tbody>
+<tr><td>동작</td><td>두 브랜치를 잇는 <strong>병합 커밋</strong> 생성</td><td>내 커밋들을 대상 브랜치 끝으로 <strong>옮겨 다시 만듦</strong></td></tr>
+<tr><td>이력</td><td>실제 일어난 그대로 (갈라졌다 합쳐짐)</td><td><strong>일직선</strong></td></tr>
+<tr><td>커밋 해시</td><td>유지</td><td><strong>바뀜</strong></td></tr>
+<tr><td>충돌 해결</td><td>한 번</td><td>커밋마다</td></tr>
+<tr><td>주의</td><td>이력이 복잡해질 수 있음</td><td><strong>이미 공유한(push 한) 커밋은 rebase 하지 않는다</strong></td></tr>
+</tbody></table></div>
+<ul>
+<li><strong>fast-forward 병합</strong>: 대상 브랜치에 새 커밋이 없으면 포인터만 앞으로 옮긴다(병합 커밋 없음).</li>
+<li><strong>squash 병합</strong>: 브랜치의 커밋들을 <strong>하나로 합쳐</strong> 반영. 기능 단위로 이력을 깔끔하게.</li>
+</ul>
+<h3 id="git-undo">되돌리기</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>명령</th><th>효과</th><th>이력</th><th>쓰는 때</th></tr></thead>
+<tbody>
+<tr><td><code>git restore &lt;file&gt;</code></td><td>작업 디렉터리의 변경을 버림</td><td>—</td><td>아직 커밋하지 않은 수정 취소</td></tr>
+<tr><td><code>git reset --soft HEAD~1</code></td><td>커밋만 취소, 변경은 <strong>스테이징에 유지</strong></td><td>이력 삭제</td><td>커밋 메시지·구성을 다시</td></tr>
+<tr><td><code>git reset --mixed HEAD~1</code> (기본)</td><td>커밋·스테이징 취소, 변경은 작업 디렉터리에 유지</td><td>이력 삭제</td><td></td></tr>
+<tr><td><code>git reset --hard HEAD~1</code></td><td>커밋·스테이징·작업 내용 <strong>모두 삭제</strong></td><td>이력 삭제</td><td>로컬에서만, 주의</td></tr>
+<tr><td><code>git revert &lt;commit&gt;</code></td><td>그 커밋을 <strong>취소하는 새 커밋</strong> 생성</td><td><strong>이력 유지</strong></td><td><strong>이미 공유한 커밋</strong>을 되돌릴 때</td></tr>
+</tbody></table></div>
+<div class="table-wrap"><table>
+<thead><tr><th>그 밖의 명령</th><th>용도</th></tr></thead>
+<tbody>
+<tr><td><code>git stash</code> / <code>git stash pop</code></td><td>하던 작업을 잠시 치워 두기 / 되살리기</td></tr>
+<tr><td><code>git cherry-pick &lt;commit&gt;</code></td><td>특정 커밋 하나만 가져오기 (핫픽스 반영)</td></tr>
+<tr><td><code>git reflog</code></td><td>HEAD 가 거쳐 온 기록. <code>reset --hard</code> 로 잃은 커밋을 되찾을 수 있다</td></tr>
+<tr><td><code>git bisect</code></td><td>이분 탐색으로 버그를 넣은 커밋 찾기</td></tr>
+<tr><td><code>git blame</code></td><td>각 줄을 마지막으로 고친 커밋 확인</td></tr>
+</tbody></table></div>
+<h3 id="branch-strategy">브랜치 전략</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>전략</th><th>브랜치</th><th>특징</th><th>적합</th></tr></thead>
+<tbody>
+<tr><td>Git Flow</td><td><code>main</code>, <code>develop</code>, <code>feature/*</code>, <code>release/*</code>, <code>hotfix/*</code></td><td>역할이 명확, 절차가 무거움</td><td>정해진 주기로 출시하는 제품, 여러 버전 유지</td></tr>
+<tr><td>GitHub Flow</td><td><code>main</code> + 짧은 기능 브랜치 → PR → 병합 즉시 배포</td><td>단순</td><td>지속 배포하는 웹 서비스</td></tr>
+<tr><td>트렁크 기반</td><td><code>main</code> 에 하루에도 여러 번 작은 단위로 병합</td><td>병합 충돌 최소, <strong>피처 플래그</strong> 필요</td><td>CI/CD 가 성숙한 팀</td></tr>
+</tbody></table></div>
+<h3 id="git-collab">충돌과 협업</h3>
+<ul>
+<li>충돌은 <strong>같은 부분을 서로 다르게 고쳤을 때</strong> 생긴다. 표시(<code>&lt;&lt;&lt;&lt;&lt;&lt;&lt;</code>, <code>=======</code>, <code>&gt;&gt;&gt;&gt;&gt;&gt;&gt;</code>) 사이를 정리하고 <code>add</code> → <code>commit</code>(또는 <code>rebase --continue</code>).</li>
+<li>줄이는 법: 브랜치 수명을 짧게, 자주 최신을 받아 오기, 작은 PR.</li>
+<li><strong>좋은 PR</strong>: 한 가지 목적, 작게, 무엇을 왜 바꿨는지와 검증 방법을 설명.</li>
+<li><strong>커밋 메시지</strong>: 제목에 "무엇을", 본문에 "왜". 관례 예: <code>feat:</code>, <code>fix:</code>, <code>refactor:</code>, <code>docs:</code>, <code>test:</code>.</li>
+<li><code>.gitignore</code> 에 빌드 산출물·비밀 정보를 넣는다. <strong>한번 커밋된 비밀은 이력에 남으므로 폐기하고 재발급</strong>한다.</li>
+</ul>
+<hr />
+<h2 id="12-3-docker">12-3. 컨테이너 — Docker <span class="badge badge-fire">🔥</span></h2>
+<h3 id="infra-t1">컨테이너가 푸는 문제</h3>
+<p>"내 컴퓨터에서는 되는데"를 없앤다. 애플리케이션과 <strong>실행에 필요한 모든 것</strong>(런타임, 라이브러리, 설정)을 이미지 하나로 묶어 어디서나 같게 실행한다. 가상 머신과의 비교는 → <a href="#1-10-virtualization">하이퍼바이저 vs 컨테이너</a></p>
+<div class="table-wrap"><table>
+<thead><tr><th>리눅스 기능</th><th>역할</th></tr></thead>
+<tbody>
+<tr><td>네임스페이스</td><td><strong>보이는 것을 격리</strong> — PID, 네트워크, 마운트, 사용자, 호스트명</td></tr>
+<tr><td>cgroups</td><td><strong>쓸 수 있는 양을 제한</strong> — CPU, 메모리, I/O</td></tr>
+<tr><td>유니온 파일 시스템</td><td>읽기 전용 <strong>레이어</strong>를 겹쳐 하나의 파일 시스템으로</td></tr>
+</tbody></table></div>
+<blockquote>
+<p>컨테이너는 가상 머신이 아니라 <strong>격리된 프로세스</strong>다. 호스트의 커널을 공유한다.</p>
+</blockquote>
+<h3 id="image-container">이미지와 컨테이너</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>개념</th><th>설명</th><th>비유</th></tr></thead>
+<tbody>
+<tr><td>이미지</td><td>읽기 전용 템플릿. 레이어의 쌓임</td><td>클래스</td></tr>
+<tr><td>컨테이너</td><td>이미지를 실행한 인스턴스. 맨 위에 <strong>쓰기 가능 레이어</strong> 하나가 붙는다</td><td>객체</td></tr>
+<tr><td>레지스트리</td><td>이미지 저장소 (Docker Hub, ECR, Harbor)</td><td>저장소</td></tr>
+<tr><td>볼륨</td><td>컨테이너가 사라져도 남는 <strong>영속 데이터</strong> 저장 공간</td><td>외장 디스크</td></tr>
+</tbody></table></div>
+<pre><code class="language-dockerfile"># 멀티 스테이지 빌드: 빌드 도구는 최종 이미지에 넣지 않는다
+FROM eclipse-temurin:21-jdk AS build
+WORKDIR /app
+COPY pom.xml mvnw ./
+COPY .mvn .mvn
+RUN ./mvnw -q dependency:go-offline        # 의존성 레이어 — 소스가 바뀌어도 캐시 재사용
+COPY src src
+RUN ./mvnw -q package -DskipTests
+
+FROM eclipse-temurin:21-jre
+WORKDIR /app
+RUN useradd -r app &amp;&amp; chown app /app
+USER app                                   # root 로 실행하지 않는다
+COPY --from=build /app/target/*.jar app.jar
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "app.jar"]
+</code></pre>
+<div class="table-wrap"><table>
+<thead><tr><th>좋은 이미지의 조건</th><th>이유</th></tr></thead>
+<tbody>
+<tr><td><strong>자주 바뀌는 것을 아래쪽 명령에</strong></td><td>레이어 캐시는 바뀐 지점부터 무효화된다</td></tr>
+<tr><td>멀티 스테이지 빌드, 작은 베이스 이미지</td><td>크기·공격 면 감소</td></tr>
+<tr><td>태그를 <code>latest</code> 로 두지 않음</td><td>재현 가능한 배포</td></tr>
+<tr><td>root 가 아닌 사용자로 실행</td><td>탈출 시 피해 제한</td></tr>
+<tr><td>비밀을 이미지에 넣지 않음</td><td>레이어에 영구히 남는다</td></tr>
+<tr><td>컨테이너 하나에 프로세스 하나</td><td>수명·확장·로그 관리가 단순</td></tr>
+</tbody></table></div>
+<div class="table-wrap"><table>
+<thead><tr><th>명령</th><th>역할</th></tr></thead>
+<tbody>
+<tr><td><code>docker build -t app:1.0 .</code></td><td>이미지 빌드</td></tr>
+<tr><td><code>docker run -d -p 8080:8080 --name app app:1.0</code></td><td>백그라운드 실행, 포트 연결</td></tr>
+<tr><td><code>docker ps</code> / <code>docker logs -f app</code></td><td>실행 목록 / 로그</td></tr>
+<tr><td><code>docker exec -it app sh</code></td><td>실행 중인 컨테이너에 접속</td></tr>
+<tr><td><code>docker stop app</code> / <code>docker rm app</code></td><td>중지 / 삭제</td></tr>
+<tr><td><code>docker compose up -d</code></td><td>여러 컨테이너를 한 파일로 정의해 실행</td></tr>
+</tbody></table></div>
+<ul>
+<li><code>CMD</code> 는 기본 인자(실행 시 덮어쓰기 쉬움), <code>ENTRYPOINT</code> 는 고정 실행 파일. <code>COPY</code> 는 단순 복사, <code>ADD</code> 는 압축 해제·URL 까지.</li>
+</ul>
+<hr />
+<h2 id="12-4-k8s">12-4. Kubernetes <span class="badge badge-star">⭐</span></h2>
+<p>컨테이너가 수백 개가 되면 <strong>어느 서버에 띄울지, 죽으면 누가 다시 띄울지, 어떻게 찾아갈지, 어떻게 무중단으로 바꿀지</strong>가 문제가 된다. 쿠버네티스는 이를 자동화하는 <strong>컨테이너 오케스트레이터</strong>다.</p>
+<p><strong>핵심 원리 — 선언적 구성과 조정 루프</strong>: "레플리카 3개"라는 <strong>원하는 상태</strong>를 선언하면, 컨트롤러가 <strong>현재 상태</strong>를 계속 관찰하며 차이를 메운다. 하나가 죽으면 새로 띄운다(자가 치유).</p>
+<h3 id="k8s-arch">구조</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>위치</th><th>구성 요소</th><th>역할</th></tr></thead>
+<tbody>
+<tr><td>컨트롤 플레인</td><td>API 서버</td><td>모든 요청의 관문</td></tr>
+<tr><td>컨트롤 플레인</td><td>etcd</td><td>클러스터 상태를 저장하는 분산 키-값 저장소</td></tr>
+<tr><td>컨트롤 플레인</td><td>스케줄러</td><td>파드를 어느 노드에 둘지 결정</td></tr>
+<tr><td>컨트롤 플레인</td><td>컨트롤러 매니저</td><td>원하는 상태로 맞추는 조정 루프 실행</td></tr>
+<tr><td>워커 노드</td><td>kubelet</td><td>노드에서 파드를 실행·감시</td></tr>
+<tr><td>워커 노드</td><td>kube-proxy</td><td>서비스로 가는 트래픽의 네트워크 규칙 관리</td></tr>
+<tr><td>워커 노드</td><td>컨테이너 런타임</td><td>컨테이너 실행 (containerd)</td></tr>
+</tbody></table></div>
+<h3 id="k8s-objects">주요 오브젝트</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>오브젝트</th><th>역할</th></tr></thead>
+<tbody>
+<tr><td><strong>파드 (Pod)</strong></td><td>배포의 최소 단위. 컨테이너 1개 이상이 네트워크·저장소를 공유</td></tr>
+<tr><td><strong>디플로이먼트</strong></td><td>무상태 애플리케이션의 레플리카 수 유지, <strong>롤링 업데이트·롤백</strong></td></tr>
+<tr><td>스테이트풀셋</td><td>고정된 이름·저장소가 필요한 상태 저장 애플리케이션 (DB)</td></tr>
+<tr><td>데몬셋</td><td>모든 노드에 하나씩 (로그 수집기, 모니터링 에이전트)</td></tr>
+<tr><td>잡 / 크론잡</td><td>한 번 실행하고 끝나는 작업 / 주기 실행</td></tr>
+<tr><td><strong>서비스</strong></td><td>수시로 바뀌는 파드들 앞의 <strong>고정 주소</strong>와 부하 분산. ClusterIP(내부), NodePort, LoadBalancer(외부)</td></tr>
+<tr><td>인그레스</td><td>호스트·경로 기반 HTTP 라우팅, TLS 종료 (L7)</td></tr>
+<tr><td>컨피그맵 / 시크릿</td><td>설정 / 민감 정보를 이미지 밖에서 주입</td></tr>
+<tr><td>네임스페이스</td><td>클러스터 안의 논리적 구획</td></tr>
+<tr><td>HPA</td><td>CPU·메모리·사용자 지표에 따라 파드 수를 <strong>자동 조절</strong></td></tr>
+<tr><td>PV / PVC</td><td>저장소 자원 / 저장소 요청</td></tr>
+</tbody></table></div>
+<h3 id="k8s-ops">운영에서 중요한 설정</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>설정</th><th>내용</th></tr></thead>
+<tbody>
+<tr><td>liveness 프로브</td><td>실패하면 컨테이너를 <strong>재시작</strong> (교착 상태 감지)</td></tr>
+<tr><td>readiness 프로브</td><td>실패하면 <strong>트래픽 대상에서 제외</strong> (기동 중, 일시 과부하)</td></tr>
+<tr><td>startup 프로브</td><td>기동이 느린 애플리케이션이 liveness 에 죽지 않도록 보호</td></tr>
+<tr><td>requests</td><td>스케줄링 시 <strong>보장</strong>받는 자원</td></tr>
+<tr><td>limits</td><td>넘을 수 없는 <strong>상한</strong>. 메모리를 넘으면 <code>OOMKilled</code>, CPU 를 넘으면 스로틀링</td></tr>
+<tr><td>롤링 업데이트</td><td>새 파드를 조금씩 띄우고 readiness 가 통과하면 옛 파드를 내림</td></tr>
+<tr><td>우아한 종료</td><td>SIGTERM → 유예 시간 → SIGKILL. 애플리케이션이 SIGTERM 을 처리해야 요청이 끊기지 않는다</td></tr>
+</tbody></table></div>
+<hr />
+<h2 id="12-5-cicd">12-5. CI/CD · 배포 전략 <span class="badge badge-fire">🔥</span></h2>
+<div class="table-wrap"><table>
+<thead><tr><th>용어</th><th>뜻</th></tr></thead>
+<tbody>
+<tr><td>지속적 통합 (CI)</td><td>코드를 <strong>자주 합치고</strong>, 합칠 때마다 자동으로 빌드·테스트</td></tr>
+<tr><td>지속적 전달 (Continuous Delivery)</td><td>언제든 배포 가능한 상태로 유지. 운영 배포는 <strong>사람이 승인</strong></td></tr>
+<tr><td>지속적 배포 (Continuous Deployment)</td><td>검증을 통과하면 운영까지 <strong>자동 배포</strong></td></tr>
+</tbody></table></div>
+<pre><code>커밋 ─▶ 빌드 ─▶ 단위 테스트 ─▶ 정적 분석·보안 검사 ─▶ 이미지 생성 ─▶ 스테이징 배포
+     ─▶ 통합·E2E 테스트 ─▶ (승인) ─▶ 운영 배포 ─▶ 모니터링 ─▶ (이상 시 롤백)
+</code></pre>
+<ul>
+<li>원칙: <strong>빌드는 한 번만</strong> 하고 같은 산출물을 환경마다 승격한다. 파이프라인이 실패하면 고치는 것이 최우선이다. 느린 파이프라인은 쓰이지 않는다.</li>
+</ul>
+<h3 id="deploy-strategy">배포 전략</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>전략</th><th>방식</th><th>장점</th><th>단점</th></tr></thead>
+<tbody>
+<tr><td>재생성 (Recreate)</td><td>전부 내리고 새 버전을 올림</td><td>단순, 두 버전이 공존하지 않음</td><td><strong>중단 시간</strong> 발생</td></tr>
+<tr><td>롤링</td><td>인스턴스를 조금씩 교체</td><td>추가 자원이 적음, 무중단</td><td>배포 중 <strong>두 버전 공존</strong>, 롤백이 느림</td></tr>
+<tr><td>블루-그린</td><td>새 환경(그린)을 통째로 준비한 뒤 트래픽을 <strong>한 번에 전환</strong></td><td>즉시 롤백, 사전 검증</td><td>자원 2배</td></tr>
+<tr><td>카나리</td><td>트래픽의 <strong>일부(1% → 10% → 100%)</strong> 만 새 버전으로</td><td>실제 트래픽으로 위험을 작게 검증</td><td>지표 기반 판단·라우팅 구성 필요</td></tr>
+</tbody></table></div>
+<div class="table-wrap"><table>
+<thead><tr><th>개념</th><th>설명</th></tr></thead>
+<tbody>
+<tr><td>피처 플래그</td><td>코드는 배포하되 기능은 <strong>스위치로 켜고 끔</strong>. 배포와 출시를 분리</td></tr>
+<tr><td>하위 호환</td><td>롤링·카나리에서는 옛 버전과 새 버전이 <strong>같은 DB·API 를 동시에</strong> 쓴다</td></tr>
+<tr><td>확장-수축 마이그레이션</td><td>컬럼 추가(확장) → 코드가 양쪽 모두 쓰기 → 옛 컬럼 제거(수축). 스키마 변경을 무중단으로</td></tr>
+<tr><td>롤백 vs 롤포워드</td><td>이전 버전으로 되돌리기 / 수정본을 빠르게 다시 배포</td></tr>
+</tbody></table></div>
+<h3 id="iac-gitops">코드로 관리하기</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>개념</th><th>내용</th><th>도구</th></tr></thead>
+<tbody>
+<tr><td>IaC (Infrastructure as Code)</td><td>인프라를 코드로 선언 → 리뷰·버전 관리·재현 가능</td><td>Terraform, CloudFormation, Ansible</td></tr>
+<tr><td>불변 인프라</td><td>서버를 고치지 않고 <strong>새 이미지로 교체</strong> → 구성 표류 방지</td><td>컨테이너, 머신 이미지</td></tr>
+<tr><td>GitOps</td><td>Git 저장소를 <strong>유일한 진실의 원천</strong>으로 삼고, 에이전트가 클러스터를 저장소 상태로 맞춤</td><td>Argo CD, Flux</td></tr>
+<tr><td>DevSecOps</td><td>보안 검사를 파이프라인 앞단으로 (<strong>Shift Left</strong>)</td><td>정적 분석(SAST), 의존성 검사(SCA), 이미지 스캔, 비밀 탐지</td></tr>
+</tbody></table></div>
+<hr />
+<h2 id="12-6-cloud">12-6. 클라우드 서비스 구성 <span class="badge badge-star">⭐</span></h2>
+<h3 id="cloud-models">서비스 모델 · 배치 모델</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>서비스 모델</th>
+<th>제공 범위</th>
+<th>사용자 관리 범위</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>IaaS</strong></td>
+<td>서버·스토리지·네트워크(가상 머신)</td>
+<td><strong>OS부터</strong> 미들웨어·앱·데이터</td>
+</tr>
+<tr>
+<td><strong>PaaS</strong></td>
+<td>+ OS·런타임·DB·미들웨어</td>
+<td><strong>앱·데이터만</strong></td>
+</tr>
+<tr>
+<td><strong>SaaS</strong></td>
+<td>완성된 소프트웨어</td>
+<td>설정·데이터 사용</td>
+</tr>
+</tbody>
+</table></div>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>배치 모델</th>
+<th>특징</th>
+<th>장점 / 단점</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>프라이빗</strong></td>
+<td>한 조직 전용, 전용회선</td>
+<td>통제·보안↑ / 비용↑, 확장성 제한</td>
+</tr>
+<tr>
+<td><strong>퍼블릭</strong></td>
+<td>인터넷으로 공유 인프라</td>
+<td>탄력성·초기비용↓ / 멀티테넌시·데이터 위치 우려</td>
+</tr>
+<tr>
+<td><strong>하이브리드</strong></td>
+<td>프라이빗 + 퍼블릭 연동</td>
+<td>데이터 성격별 배치 / 연동·관리 복잡</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="cloud-vs-onprem">클라우드 vs 온프레미스</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>비교 축</th>
+<th>클라우드</th>
+<th>자체 서버 (온프레미스)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>비용 구조</td>
+<td><strong>OPEX</strong>(종량제), 초기 투자 적음</td>
+<td><strong>CAPEX</strong>(장비 구매), 장기적으론 유리할 수 있음</td>
+</tr>
+<tr>
+<td>확장성</td>
+<td>오토스케일링으로 즉시</td>
+<td>장비 증설에 수주~수개월</td>
+</tr>
+<tr>
+<td>구축 속도</td>
+<td>빠름</td>
+<td>느림</td>
+</tr>
+<tr>
+<td>운영 부담</td>
+<td>HW·패치 일부를 CSP가 담당</td>
+<td>전부 직접</td>
+</tr>
+<tr>
+<td>가용성·DR</td>
+<td>멀티 리전·이중화 쉬움</td>
+<td>별도 DR 센터 필요</td>
+</tr>
+<tr>
+<td>보안·통제</td>
+<td>통제권·데이터 위치 제약, 벤더 종속(Lock-in)</td>
+<td><strong>완전한 통제</strong></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="region-az">리전과 가용 영역</h3>
+<ul>
+<li><strong>리전</strong>: 지리적으로 떨어진 데이터센터 묶음. <strong>가용 영역(AZ)</strong>: 리전 안의 서로 독립된 데이터센터(전원·네트워크 분리).</li>
+<li>한 AZ 장애에 대비해 <strong>여러 AZ 에 걸쳐</strong> 배치한다. 리전 전체 장애까지 대비하려면 다중 리전(비용·복잡도 큼).</li>
+</ul>
+<h3 id="cloud-services">핵심 서비스 대응표</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>분류</th><th>개념</th><th>AWS 예</th></tr></thead>
+<tbody>
+<tr><td>컴퓨팅</td><td>가상 서버</td><td>EC2</td></tr>
+<tr><td>컴퓨팅</td><td>컨테이너 오케스트레이션</td><td>EKS, ECS</td></tr>
+<tr><td>컴퓨팅</td><td>서버리스 함수</td><td>Lambda</td></tr>
+<tr><td>저장</td><td>객체 저장소</td><td>S3</td></tr>
+<tr><td>저장</td><td>블록 저장소 (서버에 붙이는 디스크)</td><td>EBS</td></tr>
+<tr><td>데이터베이스</td><td>관리형 관계형 DB</td><td>RDS, Aurora</td></tr>
+<tr><td>데이터베이스</td><td>관리형 NoSQL / 캐시</td><td>DynamoDB / ElastiCache</td></tr>
+<tr><td>네트워크</td><td>가상 사설망</td><td>VPC</td></tr>
+<tr><td>네트워크</td><td>로드 밸런서 / CDN / DNS</td><td>ELB / CloudFront / Route 53</td></tr>
+<tr><td>메시징</td><td>큐 / 발행-구독 / 스트림</td><td>SQS / SNS / Kinesis, MSK</td></tr>
+<tr><td>보안</td><td>계정·권한 / 키 관리</td><td>IAM / KMS</td></tr>
+<tr><td>관측</td><td>로그·메트릭</td><td>CloudWatch</td></tr>
+</tbody></table></div>
+<div class="table-wrap"><table>
+<thead><tr><th>저장소</th><th>접근 방식</th><th>쓰임</th></tr></thead>
+<tbody>
+<tr><td>객체 저장소</td><td>HTTP API, 키로 객체 전체를 읽고 씀</td><td>이미지, 백업, 로그, 데이터 레이크. 사실상 무제한, 저렴</td></tr>
+<tr><td>블록 저장소</td><td>디스크처럼 마운트</td><td>DB, 운영 체제 디스크</td></tr>
+<tr><td>파일 저장소</td><td>여러 서버가 공유 마운트 (NFS)</td><td>공유 파일</td></tr>
+</tbody></table></div>
+<h3 id="vpc">네트워크 구성</h3>
+<pre><code>VPC (10.0.0.0/16)
+├─ 퍼블릭 서브넷   — 인터넷 게이트웨이로 가는 경로 있음 → 로드 밸런서, 배스천, NAT 게이트웨이
+└─ 프라이빗 서브넷 — 인터넷에서 직접 접근 불가          → 애플리케이션 서버, DB
+                     (밖으로 나갈 때만 NAT 게이트웨이 경유)
+</code></pre>
+<div class="table-wrap"><table>
+<thead><tr><th>구분</th><th>보안 그룹</th><th>네트워크 ACL</th></tr></thead>
+<tbody>
+<tr><td>적용 대상</td><td><strong>인스턴스</strong></td><td><strong>서브넷</strong></td></tr>
+<tr><td>상태</td><td><strong>상태 저장</strong> (들어온 요청의 응답은 자동 허용)</td><td>상태 비저장 (양방향 규칙을 각각)</td></tr>
+<tr><td>규칙</td><td>허용만</td><td>허용 + 거부</td></tr>
+</tbody></table></div>
+<ul>
+<li><strong>최소 권한 원칙</strong>: DB 의 보안 그룹은 애플리케이션 서버의 보안 그룹에서 오는 DB 포트만 허용한다.</li>
+</ul>
+<h3 id="cloud-elastic">탄력성 · 서버리스 · 책임</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>개념</th><th>내용</th></tr></thead>
+<tbody>
+<tr><td>오토 스케일링</td><td>지표(CPU, 요청 수, 큐 길이)에 따라 인스턴스 수를 자동 조절. 서버가 <strong>무상태</strong>여야 가능</td></tr>
+<tr><td>서버리스 (FaaS)</td><td>서버 관리 없이 함수 단위 실행, <strong>호출한 만큼 과금</strong>, 0 까지 축소. 단점 — 콜드 스타트, 실행 시간 제한, 공급자 종속</td></tr>
+<tr><td>관리형 서비스</td><td>패치·백업·장애 조치를 공급자가 수행. 운영 부담 ↔ 비용·제어권</td></tr>
+<tr><td><strong>공유 책임 모델</strong></td><td>공급자는 <strong>클라우드 자체의 보안</strong>(시설, 하드웨어, 하이퍼바이저), 고객은 <strong>클라우드 안의 보안</strong>(데이터, 접근 권한, 설정, 암호화)</td></tr>
+</tbody></table></div>
+<ul>
+<li>클라우드 침해 사고의 대부분은 공급자의 결함이 아니라 <strong>고객의 설정 오류</strong>(공개된 저장소, 과도한 권한, 유출된 접근 키)에서 나온다.</li>
+<li>비용: 예약·절감 약정, 스팟 인스턴스(중단 가능한 작업), 사용하지 않는 자원 정리, <strong>데이터 전송(나가는 트래픽) 비용</strong> 주의.</li>
+</ul>
+<hr />
+<h2 id="12-7-observability">12-7. 관측성 · 장애 대응 <span class="badge badge-fire">🔥</span> <span class="badge badge-calc">🧮</span></h2>
+<h3 id="observability">모니터링 vs 관측성</h3>
+<p>모니터링은 <strong>미리 정한 지표</strong>가 임계값을 넘는지 본다("무엇이 고장 났는가"). 관측성은 시스템이 내놓는 신호로부터 <strong>처음 보는 문제의 원인까지 물을 수 있는</strong> 성질이다("왜 고장 났는가").</p>
+<div class="table-wrap"><table>
+<thead><tr><th>신호</th><th>내용</th><th>답하는 질문</th><th>도구 예</th></tr></thead>
+<tbody>
+<tr><td>메트릭</td><td>시간에 따른 <strong>숫자</strong> (집계)</td><td>얼마나? 언제부터?</td><td>Prometheus, Grafana</td></tr>
+<tr><td>로그</td><td>개별 <strong>사건</strong>의 기록</td><td>정확히 무슨 일이?</td><td>ELK, Loki</td></tr>
+<tr><td>트레이스</td><td>요청 하나가 서비스들을 거친 <strong>경로와 구간별 시간</strong></td><td>어디서 느린가?</td><td>OpenTelemetry, Jaeger</td></tr>
+</tbody></table></div>
+<p><strong>4대 황금 신호</strong>: <strong>지연 시간</strong>(Latency), <strong>트래픽</strong>(Traffic), <strong>오류율</strong>(Errors), <strong>포화도</strong>(Saturation — 자원이 얼마나 찼는가)</p>
+<h3 id="sli-slo-sla">SLI · SLO · SLA</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>용어</th><th>뜻</th><th>예</th></tr></thead>
+<tbody>
+<tr><td>SLI (지표)</td><td>서비스 수준을 <strong>측정한 값</strong></td><td>성공한 요청의 비율</td></tr>
+<tr><td>SLO (목표)</td><td>내부적으로 정한 <strong>목표치</strong></td><td>30일 기준 성공률 99.9%</td></tr>
+<tr><td>SLA (협약)</td><td>고객과의 <strong>계약</strong>. 어기면 보상</td><td>99.5% 미만이면 요금 환불</td></tr>
+<tr><td>오류 예산</td><td>1 − SLO. <strong>허용된 실패량</strong></td><td>99.9% → 0.1%</td></tr>
+</tbody></table></div>
+<ul>
+<li>오류 예산이 남아 있으면 새 기능을 빠르게 내고, 다 쓰면 안정화에 집중한다. "얼마나 안전하게 할 것인가"를 숫자로 합의하는 장치다.</li>
+</ul>
+<h3 id="availability">가용성 계산</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>가용성</th><th>연간 허용 중단</th><th>월간 허용 중단</th></tr></thead>
+<tbody>
+<tr><td>99%</td><td>3.65일</td><td>7.3시간</td></tr>
+<tr><td>99.9%</td><td>8.76시간</td><td>43.8분</td></tr>
+<tr><td>99.99%</td><td>52.6분</td><td>4.38분</td></tr>
+<tr><td>99.999%</td><td>5.26분</td><td>26.3초</td></tr>
+</tbody></table></div>
+<p><strong>가용성 = MTBF / (MTBF + MTTR)</strong> — MTBF(평균 고장 간격)를 늘리거나 <strong>MTTR(평균 복구 시간)을 줄이면</strong> 오른다.</p>
+<div class="calc-ex">
+<p><strong>예제.</strong> 가용성이 각각 99% 인 구성 요소 두 개를 (1) 직렬로 (2) 병렬(이중화)로 연결했을 때의 가용성은? (3) 웹(99.9%) → 애플리케이션(99.9%) → DB(99.9%) 를 거치는 서비스의 가용성과 연간 중단 시간은?</p>
+<details><summary>풀이</summary>
+<ol>
+<li>직렬: 둘 다 살아 있어야 한다 → 0.99 × 0.99 = <strong>98.01%</strong></li>
+<li>병렬: 둘 다 죽어야 중단 → 1 − (0.01 × 0.01) = <strong>99.99%</strong></li>
+<li>0.999³ ≈ <strong>99.7%</strong> → 연간 약 0.3% × 8,760시간 ≈ <strong>26시간</strong></li>
+</ol>
+<p>거치는 구성 요소가 늘수록 전체 가용성은 <strong>내려가고</strong>, 이중화하면 <strong>올라간다</strong>. 그래서 단일 장애점(SPOF)을 찾아 이중화한다.</p>
+</details>
+</div>
+<h3 id="alerting">좋은 알림의 조건</h3>
+<ul>
+<li><strong>증상</strong> 기준으로 알린다(사용자가 겪는 오류율·지연). 원인 지표(CPU 80%)마다 알리면 알림 피로가 쌓여 진짜 알림을 놓친다.</li>
+<li>알림을 받은 사람이 <strong>무엇을 해야 하는지</strong> 알 수 있어야 한다(런북 링크).</li>
+<li>지금 사람이 움직여야 하는 것만 호출하고, 나머지는 티켓이나 대시보드로 보낸다.</li>
+</ul>
+<h3 id="incident">장애 대응</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>단계</th><th>내용</th></tr></thead>
+<tbody>
+<tr><td>1. 탐지</td><td>알림, 고객 문의. 탐지가 늦을수록 피해가 커진다</td></tr>
+<tr><td>2. 전파 · 역할 분담</td><td>지휘자, 조치 담당, 소통 담당을 나눈다. 상황을 한 채널에 기록</td></tr>
+<tr><td>3. <strong>완화</strong></td><td><strong>원인 규명보다 서비스 복구가 먼저</strong>. 롤백, 트래픽 전환, 기능 끄기, 증설</td></tr>
+<tr><td>4. 원인 분석</td><td>로그·지표·변경 이력 확인. "최근에 무엇이 바뀌었는가"가 가장 강력한 단서</td></tr>
+<tr><td>5. 복구 확인</td><td>지표가 정상으로 돌아왔는지, 밀린 작업은 없는지</td></tr>
+<tr><td>6. <strong>사후 검토</strong></td><td>시간순 기록, 근본 원인, 잘된 점·부족한 점, <strong>재발 방지 조치와 담당·기한</strong></td></tr>
+</tbody></table></div>
+<ul>
+<li><strong>비난 없는 사후 검토(Blameless Postmortem)</strong>: 개인의 실수가 아니라 <strong>실수가 장애로 이어지게 둔 시스템·절차</strong>를 고친다. 탓하면 다음부터 숨긴다.</li>
+<li><strong>5 Whys</strong>: "왜?"를 거듭 물어 표면 원인 뒤의 구조적 원인까지 내려간다.</li>
+<li>대부분의 장애는 <strong>변경</strong>(배포, 설정, 인프라 작업)에서 시작된다. 그래서 점진적 배포, 빠른 롤백, 변경 이력 추적이 핵심 방어 수단이다.</li>
+</ul>
+</div>

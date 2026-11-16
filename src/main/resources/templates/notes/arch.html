@@ -1,0 +1,1000 @@
+<div class="note-body" th:fragment="content" th:inline="none" xmlns:th="http://www.thymeleaf.org">
+<h1 id="part-4">Part 4. 컴퓨터구조</h1>
+<pre><code>컴퓨터구조 (Computer Architecture)
+├─ 1. 컴퓨터 구조 기초              🔥
+│   ├─ CPU 구성 (Control Unit / ALU / Register)
+│   ├─ Instruction Cycle
+│   └─ RISC vs CISC
+├─ 2. 메모리 계층 구조              🔥
+├─ 3. Cache Memory                🔥 🧮
+│   ├─ Write Policy (Write-through vs Write-back)
+│   └─ 평균 접근시간(EAT) 계산
+├─ 4. 데이터 표현                  ⭐
+│   ├─ 고정소수점 vs 부동소수점
+│   ├─ 패리티 비트 / 해밍 코드
+│   └─ 정수 표현(보수) · Carry/Overflow · unsigned  🔥 🧮
+├─ 5. 저장장치 &amp; I/O               ⭐
+│   ├─ RAID
+│   └─ 플래시 메모리 (SLC/MLC/TLC), SSD FTL
+├─ 6. 병렬 처리                    △
+│   └─ CPU vs GPU 구조
+├─ 7. 논리회로 (불 대수 · 카르노 맵 · 플립플롭) ⭐ 🧮
+├─ 8. 명령어 형식 · 주소 지정 방식      ⭐
+├─ 9. 성능 평가 (CPU 시간 · 암달의 법칙) 🔥 🧮
+├─ 10. 플린 분류 · 멀티코어            ⭐
+├─ 11. 입출력 · 버스 · 인터럽트         ⭐
+└─ 12. 부동소수점 · 엔디안             ⭐ 🧮
+</code></pre>
+<hr />
+<h2 id="4-1-cpu-instruction-cycle">4-1. CPU 구성과 Instruction Cycle <span class="badge badge-fire">🔥</span></h2>
+<h3 id="cpu-3">CPU 3대 구성 요소</h3>
+<pre><code>┌───────────────────────────────┐
+│              CPU               │
+│  ┌───────────┐  ┌───────────┐ │
+│  │  Control  │  │    ALU    │ │   Control Unit: 명령어를 해석하고
+│  │   Unit    │  │(Arithmetic│ │   각 장치에 제어 신호를 보냄
+│  │ (제어장치)  │  │  Logic    │ │
+│  │           │  │   Unit)   │ │   ALU: 실제 연산(산술·논리) 수행
+│  └───────────┘  └───────────┘ │
+│  ┌───────────────────────────┐│   Register: CPU 내부의
+│  │        Register           ││   초고속 임시 저장 공간
+│  └───────────────────────────┘│
+└───────────────────────────────┘
+</code></pre>
+<p><strong>주요 레지스터</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>레지스터</th>
+<th>역할</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>PC</strong> (Program Counter)</td>
+<td>다음에 실행할 명령어의 주소</td>
+</tr>
+<tr>
+<td><strong>IR</strong> (Instruction Register)</td>
+<td>현재 가져온(fetch한) 명령어</td>
+</tr>
+<tr>
+<td><strong>MAR</strong> (Memory Address Register)</td>
+<td>메모리에 접근할 주소</td>
+</tr>
+<tr>
+<td><strong>MBR/MDR</strong> (Memory Buffer/Data Register)</td>
+<td>메모리와 주고받을 데이터</td>
+</tr>
+<tr>
+<td><strong>AC</strong> (Accumulator)</td>
+<td>연산 중간 결과 저장</td>
+</tr>
+<tr>
+<td><strong>SP</strong> (Stack Pointer)</td>
+<td>스택의 최상단 주소</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="instruction-cycle">Instruction Cycle (명령어 사이클) <span class="badge badge-fire">🔥</span></h3>
+<pre><code>┌────────┐    ┌────────┐    ┌─────────┐    ┌─────────┐
+│ Fetch  │───►│ Decode │───►│ Execute │───►│ Store /  │──┐
+│(인출)   │    │(해독)   │    │ (실행)   │    │Writeback │  │
+└────────┘    └────────┘    └─────────┘    └─────────┘  │
+     ▲                                                    │
+     └──────────── 다음 명령어로 (PC 증가) ──────────────────┘
+                          │
+                 (인터럽트 확인은 매 사이클 끝에서)
+</code></pre>
+<ol>
+<li><strong>Fetch</strong>: PC가 가리키는 주소의 명령어를 메모리에서 IR로 가져옴. PC 증가</li>
+<li><strong>Decode</strong>: 명령어를 해석하여 어떤 연산인지, 오퍼랜드는 무엇인지 판단</li>
+<li><strong>Execute</strong>: ALU가 실제 연산 수행</li>
+<li><strong>Store(Writeback)</strong>: 결과를 레지스터나 메모리에 저장</li>
+</ol>
+<blockquote>
+<p>이 사이클이 끝날 때마다 CPU는 <strong>인터럽트 발생 여부를 확인</strong>한다. (1장 Interrupt와 연결)</p>
+</blockquote>
+<h3 id="risc-vs-cisc"><span class="badge badge-fire">🔥</span> RISC vs CISC (어셈블리 코드로 판단)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>항목</th>
+<th><strong>RISC</strong> (Reduced Instruction Set Computer)</th>
+<th><strong>CISC</strong> (Complex Instruction Set Computer)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>명령어 개수</td>
+<td><strong>적음</strong>, 단순함</td>
+<td><strong>많음</strong>, 복잡함</td>
+</tr>
+<tr>
+<td>명령어 길이</td>
+<td><strong>고정 길이</strong></td>
+<td>가변 길이</td>
+</tr>
+<tr>
+<td>명령어당 실행</td>
+<td><strong>1 클록에 1개</strong> (파이프라이닝에 최적)</td>
+<td>명령어마다 여러 클록 소요</td>
+</tr>
+<tr>
+<td>실행 방식</td>
+<td><strong>Load/Store 구조</strong> — 연산은 레지스터끼리만, 메모리 접근은 Load/Store 명령만 담당</td>
+<td>메모리를 직접 피연산자로 사용 가능</td>
+</tr>
+<tr>
+<td>하드웨어</td>
+<td>단순 (제어 로직이 하드와이어드)</td>
+<td>복잡 (마이크로코드로 명령어 해석)</td>
+</tr>
+<tr>
+<td>컴파일러 부담</td>
+<td><strong>큼</strong> (복잡한 연산을 여러 단순 명령어로 쪼개야 함)</td>
+<td>작음 (하드웨어가 복잡한 연산을 한 번에 처리)</td>
+</tr>
+<tr>
+<td>코드 길이</td>
+<td><strong>김</strong> (명령어 수 많음)</td>
+<td>짧음</td>
+</tr>
+<tr>
+<td>전력 소모</td>
+<td><strong>적음</strong></td>
+<td>많음</td>
+</tr>
+<tr>
+<td>대표 예</td>
+<td><strong>ARM</strong>, RISC-V, 옛 SPARC/MIPS</td>
+<td><strong>x86/x86-64</strong> (Intel, AMD)</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>어셈블리 코드로 구별하는 방법</strong></p>
+<pre><code>x86-64 (CISC) 예시:
+  mov  DWORD PTR [rbp-4], 1     ← 메모리에 직접 값을 저장(mov가 메모리 오퍼랜드 직접 다룸)
+  add  eax, edx                 ← 레지스터 연산
+
+ARM (RISC) 예시:
+  movs r3, #1
+  str  r3, [r7, #12]            ← 레지스터 값을 메모리에 &quot;따로&quot; 저장(str/ldr 명령 분리)
+  ldr  r3, [r7, #8]             ← Load 전용 명령어 존재
+  adds r3, r3, r2                ← 반드시 레지스터끼리만 연산
+</code></pre>
+<blockquote>
+<p><strong>판별 포인트</strong>: 메모리 접근 명령(<code>ldr</code>/<code>str</code>, Load/Store)이 <strong>연산 명령과 분리</strong>되어 있고 레지스터끼리만 연산하면 → <strong>RISC(ARM)</strong>. <code>mov</code>, <code>add</code> 등이 메모리 주소를 직접 오퍼랜드로 받으며 섞여 쓰이면 → <strong>CISC(x86)</strong>.</p>
+</blockquote>
+<p><strong>장단점 요약</strong>
+- RISC 장점: 파이프라이닝 효율 ↑, 설계 단순, 전력 효율 ↑ (모바일에 적합) / 단점: 코드 크기 증가, 컴파일러 최적화 의존도 높음
+- CISC 장점: 적은 명령어로 복잡한 작업 수행(코드 밀도 ↑), 어셈블리 작성 편의 / 단점: 파이프라이닝 어려움, 하드웨어 복잡·전력 소모 큼</p>
+<hr />
+<h2 id="4-2">4-2. 메모리 계층 구조 <span class="badge badge-fire">🔥</span></h2>
+<pre><code>        속도 빠름 △          용량 작음 △        비용/bit 높음 △
+        ┌─────────────┐
+        │  Register   │  ns 단위, CPU 내부
+        ├─────────────┤
+        │  L1 Cache   │
+        ├─────────────┤
+        │  L2 Cache   │
+        ├─────────────┤
+        │  L3 Cache   │
+        ├─────────────┤
+        │Main Memory  │  (RAM) - 수십~수백 ns
+        │  (DRAM)     │
+        ├─────────────┤
+        │    SSD      │  μs 단위
+        ├─────────────┤
+        │    HDD      │  ms 단위
+        └─────────────┘
+        속도 느림 ▽          용량 큼 ▽        비용/bit 낮음 ▽
+</code></pre>
+<p><strong>계층 구조가 성립하는 원리 = 지역성(Locality of Reference)</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>지역성</th>
+<th>설명</th>
+<th>활용</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>시간적 지역성 (Temporal)</strong></td>
+<td>최근 접근한 데이터는 <strong>곧 다시 접근</strong>될 가능성이 높다</td>
+<td>캐시에 최근 사용 데이터 유지 (LRU)</td>
+</tr>
+<tr>
+<td><strong>공간적 지역성 (Spatial)</strong></td>
+<td>접근한 주소에 <strong>인접한 주소</strong>도 곧 접근될 가능성이 높다</td>
+<td>캐시가 <strong>블록(라인) 단위</strong>로 한꺼번에 가져옴</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p>지역성이 성립하기 때문에, 작고 빠른 캐시에 "자주 쓰는 것만" 올려도 <strong>적중률(Hit Ratio)이 높게 유지</strong>된다. 이게 메모리 계층 구조 전체의 존재 이유다.</p>
+</blockquote>
+<hr />
+<h2 id="4-3-cache-memory">4-3. Cache Memory <span class="badge badge-fire">🔥</span> <span class="badge badge-calc">🧮</span></h2>
+<h3 id="write-policy-write-through-vs-write-back">Write Policy — Write-through vs Write-back</h3>
+<pre><code>write-through                    write-back
+  CPU                              CPU
+   │                                │
+   │──────►┌──────┐                 │──────►┌──────┐
+   │       │ 캐시  │                 │       │ 캐시  │
+   │       └──┬───┘                 │       └──┬───┘
+   │          │ (항상 같이 씀)         │          │ (일단 캐시만 갱신,
+   ▼          ▼                     │          │  Dirty bit 표시)
+┌──────────────┐                    │          ▼
+│   주기억장치   │                    │      ┌──────────────┐
+└──────────────┘                    └─────►│   주기억장치   │
+                                    (교체 시점에만 몰아서 씀)  └──────────────┘
+</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>항목</th>
+<th><strong>Write-through</strong></th>
+<th><strong>Write-back</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>정의</td>
+<td>캐시에 쓸 때 <strong>주기억장치에도 즉시 함께 기록</strong></td>
+<td>캐시에만 쓰고, 해당 블록이 <strong>교체될 때(축출 시)</strong> 비로소 주기억장치에 반영</td>
+</tr>
+<tr>
+<td>필요 요소</td>
+<td>없음</td>
+<td><strong>Dirty Bit(수정 비트)</strong> — 수정 여부 표시</td>
+</tr>
+<tr>
+<td>일관성</td>
+<td><strong>항상 일치</strong>(메모리가 항상 최신)</td>
+<td>교체 전까지는 <strong>불일치 상태 존재</strong></td>
+</tr>
+<tr>
+<td>쓰기 속도</td>
+<td><strong>느림</strong> (매번 메모리 접근)</td>
+<td><strong>빠름</strong> (캐시에만 쓰면 끝)</td>
+</tr>
+<tr>
+<td>메모리 트래픽</td>
+<td>큼 (매 쓰기마다 발생)</td>
+<td>적음 (실제 축출될 때만)</td>
+</tr>
+<tr>
+<td>멀티코어 일관성</td>
+<td>상대적으로 유리 (항상 최신)</td>
+<td>별도의 캐시 일관성 프로토콜 필요(MESI 등)</td>
+</tr>
+<tr>
+<td>장애 시 안전성</td>
+<td><strong>안전</strong> (메모리가 항상 최신이라 데이터 손실 적음)</td>
+<td>전원 손실 시 <strong>미반영 데이터 유실 위험</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p class="moved-stub">↗ 부록 A · <a href="#eat">평균 접근시간(EAT) 계산</a></p>
+<h3 id="write-miss">Write Miss 정책 (참고) <span class="badge badge-tri">△</span></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>정책</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Write-allocate</strong></td>
+<td>쓰기 미스 시 해당 블록을 캐시로 가져온 뒤 씀 (Write-back과 자주 결합)</td>
+</tr>
+<tr>
+<td><strong>No-write-allocate</strong></td>
+<td>캐시를 거치지 않고 주기억장치에 바로 씀 (Write-through와 자주 결합)</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="4-4">4-4. 데이터 표현 <span class="badge badge-star">⭐</span></h2>
+<h3 id="vs_2">고정소수점 vs 부동소수점</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th><strong>고정소수점 (Fixed-point)</strong></th>
+<th><strong>부동소수점 (Floating-point)</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>구조</td>
+<td>소수점 위치 <strong>고정</strong></td>
+<td>부호 + <strong>지수부(Exponent)</strong> + <strong>가수부(Mantissa)</strong></td>
+</tr>
+<tr>
+<td>표현 범위</td>
+<td>좁음</td>
+<td><strong>매우 넓음</strong></td>
+</tr>
+<tr>
+<td>정밀도</td>
+<td>일정</td>
+<td>값의 크기에 따라 <strong>정밀도가 달라짐</strong>(큰 수일수록 오차 커짐)</td>
+</tr>
+<tr>
+<td>연산 속도</td>
+<td><strong>빠름</strong>, 하드웨어 단순</td>
+<td>느림(별도 FPU 필요), 복잡</td>
+</tr>
+<tr>
+<td>오차</td>
+<td>없음(정수 범위 내 정확)</td>
+<td><strong>반올림 오차 발생 가능</strong> (0.1을 정확히 표현 못 함 등)</td>
+</tr>
+<tr>
+<td>용도</td>
+<td>임베디드, 정수 연산 중심</td>
+<td>과학 연산, 그래픽, <strong>딥러닝</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>IEEE 754 (32비트 단정도)</strong>: <code>[부호 1비트][지수 8비트][가수 23비트]</code></p>
+<h3 id="vs_3">패리티 비트 vs 해밍 코드</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th><strong>패리티 비트 (Parity Bit)</strong></th>
+<th><strong>해밍 코드 (Hamming Code)</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>목적</td>
+<td><strong>오류 검출만</strong> 가능</td>
+<td><strong>오류 검출 + 정정</strong> 가능</td>
+</tr>
+<tr>
+<td>원리</td>
+<td>1의 개수를 짝수/홀수로 맞추는 비트 1개 추가</td>
+<td>여러 개의 패리티 비트를 <strong>특정 위치</strong>(2의 거듭제곱 위치)에 배치해 오류 위치까지 특정</td>
+</tr>
+<tr>
+<td>한계</td>
+<td><strong>2비트 오류는 검출 불가</strong>(짝수 개 오류 시 패리티가 우연히 맞음), 오류가 어디인지는 모름</td>
+<td>계산 및 저장 공간 오버헤드가 더 큼</td>
+</tr>
+<tr>
+<td>용도</td>
+<td>간단한 전송 오류 검출 (시리얼 통신 등)</td>
+<td><strong>ECC 메모리</strong>, 저장장치 등 정정이 필요한 곳</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="int-representation">정수 표현 — 부호-크기 / 1의 보수 / 2의 보수 <span class="badge badge-fire">🔥</span></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>(n비트)</th>
+<th>부호-크기</th>
+<th>1의 보수</th>
+<th>2의 보수</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>음수 만드는 법</td>
+<td>최상위 비트(MSB)만 1</td>
+<td><strong>모든 비트 반전</strong></td>
+<td><strong>비트 반전 + 1</strong></td>
+</tr>
+<tr>
+<td>같은 식</td>
+<td>–</td>
+<td>(2ⁿ − 1) − x  (4비트: 1111 − x)</td>
+<td>2ⁿ − x  (4비트: 10000 − x)</td>
+</tr>
+<tr>
+<td>0의 표현</td>
+<td>+0, −0 두 개</td>
+<td>+0, −0 두 개</td>
+<td><strong>하나뿐</strong></td>
+</tr>
+<tr>
+<td>범위 (4비트)</td>
+<td>−7 ~ +7</td>
+<td>−7 ~ +7</td>
+<td><strong>−8 ~ +7</strong></td>
+</tr>
+<tr>
+<td>뺄셈</td>
+<td>별도 회로 필요</td>
+<td>덧셈 + 끝자리 올림(end-around carry) 처리</td>
+<td><strong>덧셈 회로 그대로</strong> (A − B = A + B의 2의 보수)</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>2의 보수를 쓰는 이유</strong>: ① 뺄셈을 덧셈 회로로 처리해 하드웨어가 단순 ② 0이 하나라 비교가 단순 ③ 표현 범위가 하나 더 넓다.</p>
+<blockquote>
+<p>⚠️ <strong>예외</strong>: 0000의 2의 보수 = 1111 + 1 = <strong>1 0000</strong> → 변환 단계에서 생긴 carry는 버려 0000이 된다.</p>
+</blockquote>
+<h3 id="carry-vs-overflow">2진 덧셈 · Carry vs Overflow <span class="badge badge-fire">🔥</span> <span class="badge badge-calc">🧮</span></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>기준</th>
+<th>판정</th>
+<th>예: 1111 + 0001</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>unsigned</strong> (부호 없음)</td>
+<td>MSB <strong>밖으로 carry가 나가면</strong> 범위 초과</td>
+<td>15 + 1 = 16 → <strong>오버플로</strong> (1 0000)</td>
+</tr>
+<tr>
+<td><strong>signed</strong> (2의 보수)</td>
+<td><strong>부호가 같은 두 수</strong>를 더했는데 결과 부호가 다름 = MSB로 들어온 carry ≠ MSB에서 나간 carry</td>
+<td>(−1) + 1 = 0 → <strong>오버플로 아님</strong></td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p>⚠️ <strong>함정</strong>: 문제가 "4비트를 <strong>초과</strong>하는 경우 오버플로"라고 정의하면 <strong>unsigned 기준(carry 발생)</strong>으로 판단한다. signed/unsigned를 섞으면 오답이다.
+<strong>문제 읽기 함정 (실제 오답)</strong>: 최종 결과를 <strong>출력 형식(예: 대문자 테이블)으로 변환</strong>하라는 조건을 놓치지 말 것. 오버플로일 때만 carry 포함 2진수를 그대로 출력하는 식의 예외 규칙을 표시해 두고 푼다.</p>
+</blockquote>
+<h3 id="unsigned-underflow">unsigned 언더플로 (Wrap-around) <span class="badge badge-fire">🔥</span></h3>
+<pre><code class="language-c">unsigned int i;
+for (i = 100; i &gt;= 0; )
+    printf(&quot;%u\n&quot;, --i);
+</code></pre>
+<ul>
+<li><code>--i</code>는 <strong>전위 감소</strong> → 출력은 99, 98, …, 1, 0</li>
+<li>i가 0일 때 <code>--i</code> → unsigned는 음수가 없으므로 <strong>최댓값 4,294,967,295 (2³² − 1)</strong>로 순환</li>
+<li><code>i &gt;= 0</code>은 unsigned에서 <strong>항상 참</strong> → <strong>무한 루프</strong> (99부터 0까지 출력 후 4294967295, 4294967294, … 계속)</li>
+<li>답안 핵심: "unsigned 자료형은 0 미만을 표현할 수 없어 조건식이 항상 참이 되고, 0에서 감소하면 모듈러 연산으로 최댓값으로 돌아간다"</li>
+<li>해결: 조건을 <code>i &gt; 0</code>으로 바꾸거나 signed int 사용</li>
+</ul>
+<h3 id="binary-fraction">소수점이 있는 2진수 ↔ 10진수 <span class="badge badge-calc">🧮</span></h3>
+<pre><code>자릿값: … 2²  2¹  2⁰ . 2⁻¹  2⁻²  2⁻³ …
+              4   2   1    0.5  0.25  0.125
+
+100110.110₂ = 32 + 4 + 2  +  0.5 + 0.25  = 38.75
+</code></pre>
+<ul>
+<li>역방향(10진 소수 → 2진): <strong>소수부에 2를 곱하고 정수부를 떼어내기</strong>를 반복. 0.75 → 1.5(1) → 1.0(1) → 0.11₂</li>
+<li>0.1처럼 2진수로 <strong>무한소수</strong>가 되는 값이 있다 → IEEE 754 부동소수점의 반올림 오차 원인</li>
+<li>답안에는 <strong>자리별 가중치 × 비트 값의 합</strong>을 표로 써야 과정 점수를 받는다</li>
+</ul>
+<hr />
+<h2 id="4-5-raid">4-5. RAID <span class="badge badge-star">⭐</span></h2>
+<p><strong>개념</strong>: 여러 개의 물리 디스크를 <strong>하나의 논리 장치처럼</strong> 묶어, <strong>성능 향상</strong> 또는 <strong>데이터 안정성(중복성)</strong> 을 확보하는 기술.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>RAID 레벨</th>
+<th>방식</th>
+<th>최소 디스크</th>
+<th>특징</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>RAID 0</strong></td>
+<td><strong>스트라이핑</strong>(데이터를 여러 디스크에 분산 저장)</td>
+<td>2</td>
+<td><strong>속도 최고</strong>, 중복 없음 → <strong>디스크 1개만 고장나도 전체 데이터 손실</strong></td>
+</tr>
+<tr>
+<td><strong>RAID 1</strong></td>
+<td><strong>미러링</strong>(동일 데이터를 여러 디스크에 복제)</td>
+<td>2</td>
+<td>안정성 높음, 읽기 속도 향상. <strong>용량 효율 50%</strong>(절반이 복사본)</td>
+</tr>
+<tr>
+<td><strong>RAID 4</strong></td>
+<td>스트라이핑 + <strong>전용 패리티 디스크 1개</strong></td>
+<td>3</td>
+<td>패리티가 한 디스크에 몰려 <strong>병목(bottleneck)</strong> 발생</td>
+</tr>
+<tr>
+<td><strong>RAID 5</strong></td>
+<td>스트라이핑 + <strong>패리티를 모든 디스크에 분산 저장</strong></td>
+<td>3</td>
+<td>RAID 4의 병목 해결. <strong>디스크 1개 고장까지 복구 가능</strong>. 널리 사용</td>
+</tr>
+<tr>
+<td><strong>RAID 6</strong></td>
+<td>RAID 5 + <strong>패리티를 이중으로 분산</strong></td>
+<td>4</td>
+<td><strong>디스크 2개까지 동시 고장 복구 가능</strong>. 안정성 최고, 쓰기 성능은 더 낮음</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="raid-4-vs-raid-5"><span class="badge badge-fire">🔥</span> RAID 5 vs RAID 6 그림 판별</h3>
+<blockquote>
+<p>문제의 <strong>A방식</strong>: 패리티가 parity A → Disk4, parity B → Disk3, parity C → Disk2, parity D → Disk1처럼 <strong>디스크마다 돌아가며 한 줄에 1개</strong> → <strong>RAID 5</strong></p>
+<p>문제의 <strong>B방식</strong>: 한 줄(스트라이프)에 <strong>parity 1과 parity 2, 두 개</strong>가 분산 → <strong>RAID 6</strong></p>
+<p>(패리티가 한 디스크에 몰려 있었다면 RAID 4)</p>
+</blockquote>
+<p><strong>B방식(RAID 6)이 A방식(RAID 5) 대비 갖는 장점</strong></p>
+<ul>
+<li>스트라이프마다 <strong>서로 독립적인 패리티 2개</strong>(P = 전체 XOR, Q = 리드-솔로몬 가중합)를 두므로 <strong>디스크 2개가 동시에 고장 나도</strong> 복구할 수 있다(식 2개 → 미지수 2개). RAID 5는 1개까지만.</li>
+<li>대용량 디스크는 고장 디스크를 <strong>재구축하는 시간이 길어</strong>, 그사이 두 번째 디스크가 고장 나는 위험이 크다 → RAID 6이 이를 견딘다.</li>
+<li>대가: 패리티를 두 번 계산해 <strong>쓰기 성능 저하</strong>, 사용 용량 <strong>n − 2</strong>(RAID 5는 n − 1).</li>
+</ul>
+<p><strong>패리티로 복구하는 원리</strong>: 패리티 = 같은 줄 데이터의 <strong>XOR</strong>. 디스크 하나가 고장 나면 남은 데이터와 패리티를 XOR해 잃어버린 블록을 복원한다.</p>
+<p><strong>RAID 0+1 / 1+0</strong> △: 스트라이핑과 미러링을 조합한 Nested RAID. 성능과 안정성을 모두 추구하지만 디스크 소요량이 크다.</p>
+<hr />
+<h2 id="4-6-ssd">4-6. 플래시 메모리 &amp; SSD <span class="badge badge-star">⭐</span></h2>
+<h3 id="slc-vs-mlc-vs-tlc">SLC vs MLC vs TLC <span class="badge badge-fire">🔥</span></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th><strong>SLC</strong> (Single)</th>
+<th><strong>MLC</strong> (Multi)</th>
+<th><strong>TLC</strong> (Triple)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>셀당 저장 비트</td>
+<td>1비트</td>
+<td>2비트</td>
+<td>3비트</td>
+</tr>
+<tr>
+<td>셀당 전압 상태 구분</td>
+<td>2단계</td>
+<td>4단계</td>
+<td><strong>8단계</strong></td>
+</tr>
+<tr>
+<td>단위 면적당 용량</td>
+<td>작음</td>
+<td>중간</td>
+<td><strong>큼</strong></td>
+</tr>
+<tr>
+<td>속도</td>
+<td><strong>빠름</strong></td>
+<td>중간</td>
+<td><strong>느림</strong></td>
+</tr>
+<tr>
+<td>수명(P/E 사이클)</td>
+<td><strong>길다</strong>(~10만 회)</td>
+<td>중간</td>
+<td><strong>짧다</strong>(~수천 회)</td>
+</tr>
+<tr>
+<td>가격</td>
+<td>비쌈</td>
+<td>중간</td>
+<td><strong>저렴</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong><span class="badge badge-fire">🔥</span> TLC가 SLC·MLC보다 용량은 크지만 속도가 느린 이유</strong></p>
+<blockquote>
+<p>한 셀에 저장하는 비트 수가 늘어날수록, 그 셀이 가질 수 있는 <strong>전압(전하량) 레벨의 개수가 지수적으로 늘어난다</strong>(1비트=2단계, 2비트=4단계, 3비트=8단계).
+읽기/쓰기를 할 때 컨트롤러는 <strong>더 촘촘하고 많은 전압 구간을 정밀하게 구분</strong>해야 하므로, 한 번에 판별·기록하는 데 <strong>더 많은 시간과 정밀한 제어</strong>가 필요하다.
+또한 전압 구간 간격이 좁아지면서 <strong>셀 간 간섭(오류) 가능성도 커져</strong>, 오류 정정(ECC) 처리 부담도 증가한다. 이것이 속도 저하와 셀 수명 단축(잦은 재기록으로 인한 마모)의 근본 원인이다.</p>
+</blockquote>
+<h3 id="ssd-ftl-flash-translation-layer">SSD의 FTL (Flash Translation Layer) <span class="badge badge-fire">🔥</span></h3>
+<p><strong>필요성</strong>: SSD는 <strong>블록(Block)/페이지(Page)</strong> 단위로 동작하지만, 운영체제는 <strong>섹터(Sector)</strong> 기반으로 저장장치를 인식한다. 이 간극을 메우기 위해 컨트롤러가 <strong>논리 섹터 주소 ↔ 물리 블록/페이지 주소를 매핑</strong>해 준다.</p>
+<p><strong>플래시 메모리의 근본 제약</strong> (FTL이 필요한 이유의 뿌리)
+- <strong>덮어쓰기(Overwrite) 불가</strong>: 데이터를 수정하려면 반드시 <strong>블록 전체를 먼저 지운(Erase) 뒤</strong> 다시 써야 함
+- <strong>읽기/쓰기는 페이지 단위, 삭제는 블록 단위</strong>(블록 하나에 여러 페이지 포함) — 단위 불일치
+- 블록별 <strong>삭제 횟수(P/E Cycle)에 물리적 수명 한계</strong>가 있음</p>
+<p><strong><span class="badge badge-fire">🔥</span> Wear Leveling (웨어 레벨링)</strong>
+- <strong>정의</strong>: 특정 블록에만 쓰기/삭제가 몰리지 않도록, <strong>모든 블록에 걸쳐 삭제 횟수를 고르게 분산</strong>시키는 기법
+- <strong>필요 이유</strong>: 플래시 셀은 삭제 횟수 제한이 있다. 자주 쓰는 블록만 계속 쓰면 그 블록만 먼저 마모되어 <strong>SSD 전체 수명이 실제보다 훨씬 짧아진다</strong>
+- <strong>방식</strong>: 새로 쓸 데이터는 <strong>삭제 횟수가 적은 블록</strong>에 우선 배치(Dynamic), 거의 안 바뀌는(Cold) 데이터도 주기적으로 이동시켜 그 블록도 마모에 동참시킴(Static)</p>
+<p><strong><span class="badge badge-fire">🔥</span> Garbage Collection (가비지 컬렉션)</strong>
+- <strong>정의</strong>: 수정되어 <strong>더 이상 유효하지 않은(Invalid) 페이지들을 정리</strong>하여 <strong>쓰기 가능한 빈 블록을 확보</strong>하는 기법
+- <strong>필요 이유</strong>: 덮어쓰기가 불가능하므로, 데이터 수정 시 <strong>기존 페이지는 무효화하고 새 페이지에 새로 쓴다</strong>(Out-of-place update). 이 무효 페이지들이 계속 쌓이면 빈 공간이 고갈된다
+- <strong>동작</strong>: 유효 데이터와 무효 데이터가 섞인 블록에서 <strong>유효한 페이지만 다른 블록으로 복사</strong>한 뒤, 원래 블록 전체를 <strong>삭제(Erase)</strong> 하여 재사용 가능하게 만듦
+- <strong>부작용</strong>: 유효 페이지를 복사하는 과정에서 <strong>추가 쓰기가 발생</strong>(Write Amplification, 쓰기 증폭) → SSD 성능 저하 및 수명 단축의 원인이 되기도 함</p>
+<blockquote>
+<p><strong>Wear Leveling과 Garbage Collection의 관계</strong>: GC가 블록을 지우고 재사용 가능하게 만드는 과정에서, Wear Leveling은 "어느 블록을 재사용 대상으로 고를지"에 <strong>마모도 균형</strong>이라는 기준을 추가로 반영한다. 둘은 상호 보완적으로 동작한다.</p>
+</blockquote>
+<h3 id="n4-5">플래시 메모리 3대 성질 — 여기서 FTL·웨어 레벨링·GC가 나온다 <span class="badge badge-fire">🔥</span></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>성질</th>
+<th>결과</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>①</td>
+<td>읽기·쓰기 = <strong>페이지</strong> 단위, 지우기 = <strong>블록</strong>(여러 페이지) 단위</td>
+<td>지울 땐 블록 통째로 → <strong>가비지 컬렉션</strong> 필요</td>
+</tr>
+<tr>
+<td>②</td>
+<td><strong>덮어쓰기 불가</strong>(Erase-before-Write)</td>
+<td>수정은 새 페이지에 쓰고 옛 페이지는 무효 → <strong>FTL 매핑</strong> 필요</td>
+</tr>
+<tr>
+<td>③</td>
+<td>블록당 <strong>지우기 횟수(P/E 사이클) 제한</strong></td>
+<td>많이 지운 블록부터 고장 → <strong>웨어 레벨링</strong> 필요</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="4-7-cpu-vs-gpu">4-7. CPU vs GPU 구조 <span class="badge badge-star">⭐</span></h2>
+<pre><code>CPU                                GPU
+┌─────────────────────┐            ┌─────────────────────┐
+│  ┌────────┐┌───────┐│            │ALU ALU ALU ALU │
+│  │Control ││ Cache ││            │ALU ALU ALU ALU │
+│  │  Unit  ││(large)││            │ALU ALU ALU ALU │
+│  └────────┘└───────┘│            │ ...(수천 개)... │
+│  ┌────────┐         │            ├─────────────────┤
+│  │  ALU   │         │            │     Memory      │
+│  │(소수, 강력)│        │            │  (제어부 최소)   │
+│  └────────┘         │            └─────────────────┘
+└─────────────────────┘
+</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>항목</th>
+<th><strong>CPU</strong></th>
+<th><strong>GPU</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>설계 철학</td>
+<td><strong>범용성</strong>, 복잡한 제어 흐름(분기, 조건문) 처리</td>
+<td><strong>처리량(Throughput)</strong> 극대화</td>
+</tr>
+<tr>
+<td>코어 구성</td>
+<td><strong>소수의 강력한 코어</strong>(수~수십 개)</td>
+<td><strong>수천 개의 단순한 코어(ALU)</strong></td>
+</tr>
+<tr>
+<td>Control Unit 비중</td>
+<td><strong>큼</strong> (분기 예측, 비순차 실행 등 정교한 제어)</td>
+<td><strong>작음</strong> (제어 로직 최소화, 그만큼 ALU를 더 채움)</td>
+</tr>
+<tr>
+<td>연산 방식</td>
+<td>순차적, 복잡한 단일 스레드 최적화(<strong>MIMD</strong>적)</td>
+<td><strong>동일 연산을 수많은 데이터에 동시 적용</strong> (<strong>SIMD</strong>, 병렬)</td>
+</tr>
+<tr>
+<td>캐시</td>
+<td>크고 다단계(지연시간 최소화 목적)</td>
+<td>상대적으로 작음(처리량 목적)</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong><span class="badge badge-fire">🔥</span> 딥러닝 연산에 GPU가 유리한 이유</strong></p>
+<blockquote>
+<p>딥러닝의 핵심 연산인 <strong>행렬 곱셈·합성곱(Convolution)</strong> 은, <strong>동일한 단순 연산(곱셈+덧셈)을 수백만 개의 서로 다른 데이터에 대해 독립적으로, 동시에 반복</strong>하는 구조다. (= <strong>데이터 병렬성</strong>이 매우 높음)</p>
+<p>CPU는 소수의 강력한 코어로 <strong>복잡한 분기 처리를 빠르게</strong> 하는 데 최적화되어 있어, 이런 단순 반복 연산을 코어 개수만큼만 나눠 순차적으로 처리한다.</p>
+<p>반면 GPU는 <strong>제어 로직을 최소화하는 대신 그 면적에 수천 개의 단순 ALU를 배치</strong>한 구조이므로, 행렬의 각 원소 연산을 <strong>수천 개의 스레드가 동시에(병렬로) 수행</strong>할 수 있다. 이 <strong>대규모 병렬 처리 능력</strong>이 CPU 대비 압도적인 학습·추론 속도 향상을 가져온다.</p>
+<p>정리하면: <strong>딥러닝 연산 = 단순 연산의 대량 반복(데이터 병렬성) → GPU의 구조(다수의 단순 ALU)와 정확히 부합</strong>하기 때문이다.</p>
+</blockquote>
+<hr />
+<h2 id="4-8-pipeline">4-8. 파이프라인과 해저드 <span class="badge badge-star">⭐</span></h2>
+<blockquote>
+<p>RISC vs CISC 비교는 <a href="#risc-vs-cisc">3-1의 RISC vs CISC</a>에 있다. RISC가 파이프라인에 유리한 이유(고정 길이, Load/Store)를 이 절과 연결해서 기억하자.</p>
+</blockquote>
+<p>명령어 실행을 단계(IF → ID → EX → MEM → WB)로 나눠 겹쳐 실행 → 이상적으로 매 클럭 1명령 완료. <span class="badge badge-calc">🧮</span> k단계, n개 명령 → 총 <strong>k + (n − 1)</strong> 클럭 (파이프라인 없으면 k × n).</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>해저드</th>
+<th>원인</th>
+<th>해결</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>구조적</strong></td>
+<td>같은 자원(메모리 포트 등)을 동시에 사용</td>
+<td>자원 추가(명령어·데이터 캐시 분리)</td>
+</tr>
+<tr>
+<td><strong>데이터</strong></td>
+<td>앞 명령 결과가 나오기 전에 뒤 명령이 사용(RAW)</td>
+<td><strong>포워딩(바이패싱)</strong>, 스톨, 명령어 재배치</td>
+</tr>
+<tr>
+<td><strong>제어</strong></td>
+<td>분기 결과를 알기 전에 다음 명령을 가져옴</td>
+<td><strong>분기 예측</strong>, 지연 분기, 스톨</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="4-9-logic">4-9. 논리회로 기초 <span class="badge badge-star">⭐</span> <span class="badge badge-calc">🧮</span></h2>
+<h3 id="boolean-algebra">기본 게이트와 불 대수</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>게이트</th><th>식</th><th>출력이 1 인 조건</th></tr></thead>
+<tbody>
+<tr><td>AND</td><td>A·B</td><td>둘 다 1</td></tr>
+<tr><td>OR</td><td>A+B</td><td>하나라도 1</td></tr>
+<tr><td>NOT</td><td>A'</td><td>입력이 0</td></tr>
+<tr><td>NAND</td><td>(A·B)'</td><td>둘 다 1 이 <strong>아닐 때</strong></td></tr>
+<tr><td>NOR</td><td>(A+B)'</td><td>둘 다 0</td></tr>
+<tr><td>XOR</td><td>A⊕B</td><td>두 입력이 <strong>다를 때</strong></td></tr>
+<tr><td>XNOR</td><td>(A⊕B)'</td><td>두 입력이 같을 때</td></tr>
+</tbody></table></div>
+<ul>
+<li><strong>NAND, NOR 는 만능 게이트</strong>: 각각 하나만으로 AND·OR·NOT 을 모두 만들 수 있다. (NOT A = A NAND A)</li>
+</ul>
+<div class="table-wrap"><table>
+<thead><tr><th>법칙</th><th>식</th></tr></thead>
+<tbody>
+<tr><td>항등 · 지배</td><td>A+0=A, A·1=A / A+1=1, A·0=0</td></tr>
+<tr><td>멱등 · 보수</td><td>A+A=A, A·A=A / A+A'=1, A·A'=0</td></tr>
+<tr><td>분배</td><td>A(B+C)=AB+AC, A+BC=(A+B)(A+C)</td></tr>
+<tr><td>흡수</td><td>A+AB=A, A(A+B)=A, A+A'B=A+B</td></tr>
+<tr><td><strong>드모르간</strong></td><td>(A+B)'=A'·B', (A·B)'=A'+B'</td></tr>
+</tbody></table></div>
+<h3 id="karnaugh">카르노 맵 (Karnaugh Map)</h3>
+<div class="calc-ex">
+<p><strong>예제.</strong> F(A,B,C) = Σm(3,4,5,6,7) 을 간소화하라.</p>
+<details><summary>풀이</summary>
+<pre><code>        BC
+        00  01  11  10
+A = 0 │  0   0   1   0     ← m3
+A = 1 │  1   1   1   1     ← m4 m5 m7 m6
+</code></pre>
+<ol>
+<li>인접한 1 을 <strong>2의 거듭제곱 개(1, 2, 4, 8…)</strong> 로 <strong>가능한 한 크게</strong> 묶는다. 묶음끼리 겹쳐도 된다.</li>
+<li>아래 행 4칸 묶음 → A 만 고정 → <strong>A</strong></li>
+<li>BC=11 열의 세로 2칸 묶음 → B=1, C=1 고정 → <strong>BC</strong></li>
+<li><strong>F = A + BC</strong></li>
+</ol>
+<p>열 순서가 00, 01, <strong>11, 10</strong> (그레이 코드)인 점에 주의한다. 양 끝 열도 서로 인접한 것으로 본다.</p>
+</details>
+</div>
+<h3 id="comb-vs-seq">조합 논리회로 vs 순차 논리회로</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>구분</th><th>조합 논리회로</th><th>순차 논리회로</th></tr></thead>
+<tbody>
+<tr><td>출력 결정</td><td><strong>현재 입력</strong>만</td><td>현재 입력 + <strong>이전 상태</strong></td></tr>
+<tr><td>기억 소자</td><td>없음</td><td>있음 (플립플롭)</td></tr>
+<tr><td>클록</td><td>불필요</td><td>필요 (동기식)</td></tr>
+<tr><td>예</td><td>가산기, 디코더, 멀티플렉서</td><td>레지스터, 카운터, 메모리</td></tr>
+</tbody></table></div>
+<div class="table-wrap"><table>
+<thead><tr><th>조합 회로</th><th>기능</th></tr></thead>
+<tbody>
+<tr><td>반가산기</td><td>1비트 두 수의 합. S = A⊕B, C = A·B</td></tr>
+<tr><td>전가산기</td><td>자리올림 입력까지 더함. S = A⊕B⊕Cin, Cout = AB + Cin(A⊕B)</td></tr>
+<tr><td>디코더</td><td>n비트 입력 → 2ⁿ 개 출력 중 하나만 활성 (주소 해독)</td></tr>
+<tr><td>인코더</td><td>2ⁿ 개 입력 → n비트 코드</td></tr>
+<tr><td>멀티플렉서 (MUX)</td><td>여러 입력 중 선택 신호로 <strong>하나를 골라</strong> 출력</td></tr>
+<tr><td>디멀티플렉서</td><td>입력 하나를 여러 출력 중 하나로 보냄</td></tr>
+</tbody></table></div>
+<h3 id="flipflop">플립플롭</h3>
+<p>1비트를 기억하는 소자. 클록의 에지에서 상태가 바뀐다.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>종류</th><th>입력</th><th>동작</th></tr></thead>
+<tbody>
+<tr><td>SR</td><td>S, R</td><td>S=1 세트, R=1 리셋, <strong>S=R=1 은 금지</strong></td></tr>
+<tr><td>D</td><td>D</td><td>입력을 그대로 저장 (Q ← D). 레지스터의 기본</td></tr>
+<tr><td>JK</td><td>J, K</td><td>SR 의 금지 입력을 해결. <strong>J=K=1 이면 반전(토글)</strong></td></tr>
+<tr><td>T</td><td>T</td><td>T=1 이면 반전. 카운터에 사용</td></tr>
+</tbody></table></div>
+<ul>
+<li><strong>래치 vs 플립플롭</strong>: 래치는 인에이블 신호가 켜진 동안 계속 입력을 따라간다(레벨 트리거). 플립플롭은 클록 <strong>에지</strong> 순간에만 바뀐다.</li>
+</ul>
+<hr />
+<h2 id="4-10-instruction">4-10. 명령어 형식 · 주소 지정 방식 <span class="badge badge-star">⭐</span></h2>
+<h3 id="arch-t1">명령어 형식</h3>
+<p>명령어 = <strong>연산 코드(Opcode)</strong> + <strong>오퍼랜드(주소)</strong>. 연산 코드가 n 비트면 최대 2ⁿ 가지 명령을 표현한다.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>형식</th><th>예 (X = A + B)</th><th>특징</th></tr></thead>
+<tbody>
+<tr><td>0-주소</td><td><code>PUSH A; PUSH B; ADD; POP X</code></td><td><strong>스택</strong> 구조. 명령어 짧음</td></tr>
+<tr><td>1-주소</td><td><code>LOAD A; ADD B; STORE X</code></td><td><strong>누산기(AC)</strong> 가 암묵적 오퍼랜드</td></tr>
+<tr><td>2-주소</td><td><code>MOV R1, A; ADD R1, B; MOV X, R1</code></td><td>결과가 한 오퍼랜드를 덮어씀. 가장 흔함</td></tr>
+<tr><td>3-주소</td><td><code>ADD X, A, B</code></td><td>프로그램 짧음, 명령어 김</td></tr>
+</tbody></table></div>
+<h3 id="addressing-modes">주소 지정 방식</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>방식</th><th>유효 주소 (EA)</th><th>메모리 참조</th><th>특징</th></tr></thead>
+<tbody>
+<tr><td>즉시 (Immediate)</td><td>오퍼랜드 자체가 값</td><td>0회</td><td>가장 빠름, 값 범위 제한</td></tr>
+<tr><td>직접 (Direct)</td><td>EA = 주소 필드</td><td>1회</td><td>단순, 주소 범위 제한</td></tr>
+<tr><td>간접 (Indirect)</td><td>EA = M[주소 필드]</td><td>2회</td><td>넓은 주소 범위, 느림</td></tr>
+<tr><td>레지스터</td><td>값이 레지스터에 있음</td><td>0회</td><td>빠름</td></tr>
+<tr><td>레지스터 간접</td><td>EA = 레지스터 내용</td><td>1회</td><td>포인터</td></tr>
+<tr><td>상대 (Relative)</td><td>EA = <strong>PC</strong> + 변위</td><td>1회</td><td>분기 명령, 재배치 가능 코드</td></tr>
+<tr><td>인덱스 (Indexed)</td><td>EA = <strong>인덱스 레지스터</strong> + 변위</td><td>1회</td><td>배열 접근</td></tr>
+<tr><td>베이스 (Base)</td><td>EA = <strong>베이스 레지스터</strong> + 변위</td><td>1회</td><td>프로그램 재배치</td></tr>
+</tbody></table></div>
+<div class="calc-ex">
+<p><strong>예제.</strong> 명령어의 주소 필드가 500, PC = 200(다음 명령어 주소), 인덱스 레지스터 = 100, M[500] = 800 일 때 각 방식의 유효 주소는?</p>
+<details><summary>풀이</summary>
+<ul>
+<li>직접: <strong>500</strong></li>
+<li>간접: M[500] = <strong>800</strong></li>
+<li>상대: PC + 500 = <strong>700</strong></li>
+<li>인덱스: 100 + 500 = <strong>600</strong></li>
+<li>즉시: 유효 주소 없음 (오퍼랜드 500 이 곧 값)</li>
+</ul>
+</details>
+</div>
+<hr />
+<h2 id="4-11-performance">4-11. 성능 평가 <span class="badge badge-fire">🔥</span> <span class="badge badge-calc">🧮</span></h2>
+<h3 id="cpu-time">CPU 시간</h3>
+<p><strong>CPU 시간 = 명령어 수(IC) × 명령어당 평균 사이클 수(CPI) × 클록 주기</strong><br>
+= IC × CPI / 클록 주파수</p>
+<div class="table-wrap"><table>
+<thead><tr><th>줄이는 방법</th><th>영향을 주는 것</th></tr></thead>
+<tbody>
+<tr><td>명령어 수 감소</td><td>알고리즘, 컴파일러, 명령어 집합(ISA)</td></tr>
+<tr><td>CPI 감소</td><td>CPU 설계(파이프라인, 캐시), ISA</td></tr>
+<tr><td>클록 주기 단축</td><td>공정 기술, 회로 설계</td></tr>
+</tbody></table></div>
+<div class="calc-ex">
+<p><strong>예제.</strong> 클록 2GHz, 명령어 10⁹ 개. 명령어 종류별 비율과 CPI 가 산술 50% (CPI 1), 적재/저장 30% (CPI 2), 분기 20% (CPI 3) 일 때 실행 시간과 MIPS 는?</p>
+<details><summary>풀이</summary>
+<ul>
+<li>평균 CPI = 0.5×1 + 0.3×2 + 0.2×3 = <strong>1.7</strong></li>
+<li>CPU 시간 = 10⁹ × 1.7 / (2×10⁹) = <strong>0.85초</strong></li>
+<li>MIPS = 클록 주파수 / (CPI × 10⁶) = 2×10⁹ / (1.7×10⁶) ≈ <strong>1176 MIPS</strong></li>
+</ul>
+</details>
+</div>
+<h3 id="amdahl">암달의 법칙 (Amdahl's Law)</h3>
+<p><strong>전체 속도 향상 = 1 / ((1 − P) + P / S)</strong><br>
+P = 개선되는 부분의 비율, S = 그 부분의 속도 향상 배수</p>
+<div class="calc-ex">
+<p><strong>예제.</strong> 프로그램의 80% 가 병렬화 가능하다. 코어 4개일 때와 코어가 무한할 때의 속도 향상은?</p>
+<details><summary>풀이</summary>
+<ul>
+<li>4코어: 1 / (0.2 + 0.8/4) = 1 / 0.4 = <strong>2.5배</strong></li>
+<li>무한: 1 / 0.2 = <strong>5배</strong> (상한)</li>
+</ul>
+</details>
+</div>
+<blockquote>
+<p>결론: <strong>개선할 수 없는 부분(순차 구간)이 전체 성능의 상한을 정한다.</strong> 그래서 "자주 실행되는 부분을 빠르게 하라(Make the common case fast)". 서버를 아무리 늘려도 DB 락 같은 직렬 구간이 남으면 처리량은 한계에 닿는다.</p>
+</blockquote>
+<h3 id="perf-metrics">성능 지표</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>지표</th><th>의미</th><th>주로 보는 곳</th></tr></thead>
+<tbody>
+<tr><td>응답 시간 (Latency)</td><td>요청 하나가 끝나기까지 걸린 시간</td><td>사용자 체감</td></tr>
+<tr><td>처리량 (Throughput)</td><td>단위 시간당 처리한 작업 수 (TPS, QPS)</td><td>시스템 용량</td></tr>
+<tr><td>이용률 (Utilization)</td><td>자원이 일하고 있는 시간 비율</td><td>용량 계획</td></tr>
+</tbody></table></div>
+<ul>
+<li>평균 응답 시간은 일부 느린 요청을 가린다. <strong>백분위수(p95, p99)</strong> 로 본다. p99 = 100개 중 가장 느린 1개를 뺀 나머지가 이 값 이하.</li>
+</ul>
+<hr />
+<h2 id="4-12-parallel">4-12. 병렬 처리 · 멀티코어 <span class="badge badge-star">⭐</span></h2>
+<h3 id="flynn">플린의 분류 (Flynn's Taxonomy)</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>분류</th><th>명령어 흐름</th><th>데이터 흐름</th><th>예</th></tr></thead>
+<tbody>
+<tr><td>SISD</td><td>단일</td><td>단일</td><td>전통적인 단일 코어</td></tr>
+<tr><td><strong>SIMD</strong></td><td>단일</td><td>다중</td><td>벡터 연산(AVX, NEON), <strong>GPU</strong></td></tr>
+<tr><td>MISD</td><td>다중</td><td>단일</td><td>거의 없음 (결함 허용 시스템)</td></tr>
+<tr><td><strong>MIMD</strong></td><td>다중</td><td>다중</td><td>멀티코어, 분산 시스템</td></tr>
+</tbody></table></div>
+<h3 id="multicore">멀티코어 관련 개념</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>개념</th><th>내용</th></tr></thead>
+<tbody>
+<tr><td>멀티코어</td><td>한 칩에 독립된 코어 여러 개. 클록 속도 경쟁이 발열·전력 한계에 부딪혀 등장</td></tr>
+<tr><td>동시 멀티스레딩 (SMT, 하이퍼스레딩)</td><td>물리 코어 하나가 <strong>논리 코어 2개</strong>로 보임. 레지스터 집합만 복제하고 실행 자원은 공유 → 성능은 2배가 아니라 대략 20~30% 향상</td></tr>
+<tr><td>SMP</td><td>모든 코어가 대등하게 메모리를 공유</td></tr>
+<tr><td>NUMA</td><td>코어 묶음마다 <strong>가까운 메모리</strong>가 따로 있어 원격 메모리 접근이 느림. 대형 서버에서 스레드와 메모리를 같은 노드에 두는 것이 중요</td></tr>
+</tbody></table></div>
+<h3 id="false-sharing">캐시 일관성과 거짓 공유</h3>
+<p>코어마다 캐시가 따로 있으므로, 한 코어가 값을 바꾸면 다른 코어의 사본을 무효화해야 한다(MESI 프로토콜: Modified · Exclusive · Shared · Invalid).</p>
+<ul>
+<li><strong>거짓 공유(False Sharing)</strong>: 서로 다른 변수인데 <strong>같은 캐시 라인(보통 64바이트)</strong> 에 놓여, 두 스레드가 각자 자기 변수만 써도 캐시 라인이 계속 무효화되어 느려지는 현상. → 변수 사이에 패딩을 넣어 다른 캐시 라인에 둔다.</li>
+<li><strong>가시성 문제</strong>: 한 스레드가 바꾼 값이 다른 스레드에 바로 보이지 않을 수 있다(레지스터·캐시·명령어 재배치). Java 의 <code>volatile</code> 은 항상 최신 값을 읽도록 보장하지만 <strong>원자성은 보장하지 않는다</strong>.</li>
+</ul>
+<hr />
+<h2 id="4-13-io-bus">4-13. 입출력 · 버스 · 인터럽트 <span class="badge badge-star">⭐</span></h2>
+<h3 id="system-bus">시스템 버스</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>버스</th><th>방향</th><th>역할</th><th>폭이 정하는 것</th></tr></thead>
+<tbody>
+<tr><td>주소 버스</td><td>단방향 (CPU → 메모리·장치)</td><td>위치 지정</td><td><strong>주소 지정 가능한 메모리 크기</strong> (n비트 → 2ⁿ)</td></tr>
+<tr><td>데이터 버스</td><td>양방향</td><td>데이터 전달</td><td>한 번에 전송하는 비트 수</td></tr>
+<tr><td>제어 버스</td><td>양방향</td><td>읽기/쓰기, 인터럽트, 클록 신호</td><td>—</td></tr>
+</tbody></table></div>
+<ul>
+<li>주소선 32개, 바이트 단위 주소 → 2³² 바이트 = <strong>4GB</strong>.</li>
+</ul>
+<h3 id="io-control">입출력 제어 방식</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>방식</th><th>CPU 개입</th><th>설명</th></tr></thead>
+<tbody>
+<tr><td>프로그램 제어 (폴링)</td><td>계속</td><td>CPU 가 상태 레지스터를 반복 검사</td></tr>
+<tr><td>인터럽트 구동</td><td>데이터 단위마다</td><td>장치가 준비되면 인터럽트 요청</td></tr>
+<tr><td><strong>DMA</strong></td><td>시작과 끝에만</td><td>DMA 제어기가 버스를 넘겨받아 <strong>장치 ↔ 메모리 직접 전송</strong></td></tr>
+<tr><td>채널 I/O</td><td>거의 없음</td><td>전용 프로세서가 I/O 프로그램 수행 (메인프레임)</td></tr>
+</tbody></table></div>
+<ul>
+<li><strong>사이클 스틸링</strong>: DMA 가 CPU 로부터 버스 사이클을 한 번씩 빌려 한 워드씩 전송. CPU 는 그 사이클만 쉰다(인터럽트처럼 상태를 저장할 필요가 없다).</li>
+<li><strong>메모리 맵 I/O vs 분리형 I/O</strong>: 장치 레지스터를 메모리 주소 공간에 두느냐(일반 적재/저장 명령으로 접근), 별도 I/O 주소 공간에 두느냐(전용 IN/OUT 명령).</li>
+</ul>
+<h3 id="interrupt-priority">인터럽트 우선순위 판별</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>방식</th><th>구현</th><th>특징</th></tr></thead>
+<tbody>
+<tr><td>폴링 (소프트웨어)</td><td>인터럽트 발생 시 장치를 순서대로 검사</td><td>유연, 느림</td></tr>
+<tr><td>데이지 체인 (하드웨어)</td><td>장치를 <strong>직렬</strong>로 연결, CPU 에 가까울수록 우선</td><td>빠름, 뒤쪽 장치 기아 가능</td></tr>
+<tr><td>병렬 우선순위</td><td>장치마다 인터럽트 요청선 + 마스크 레지스터</td><td>가장 빠름, 회로 복잡</td></tr>
+</tbody></table></div>
+<ul>
+<li><strong>벡터 인터럽트</strong>: 장치가 자신의 인터럽트 번호를 보내면 CPU 가 <strong>인터럽트 벡터 테이블</strong>에서 처리 루틴 주소를 바로 찾는다.</li>
+<li>우선순위 일반: 전원 이상 &gt; 기계 검사 &gt; 외부 &gt; 입출력 &gt; 프로그램(예외) &gt; 시스템 콜.</li>
+</ul>
+<hr />
+<h2 id="4-14-float-endian">4-14. 부동소수점 · 엔디안 <span class="badge badge-star">⭐</span> <span class="badge badge-calc">🧮</span></h2>
+<h3 id="ieee754">IEEE 754 단정도 (32비트)</h3>
+<pre><code>│ 부호 1비트 │ 지수 8비트 (바이어스 127) │ 가수 23비트 │
+값 = (−1)^부호 × 1.가수 × 2^(지수 − 127)
+</code></pre>
+<div class="table-wrap"><table>
+<thead><tr><th>형식</th><th>부호</th><th>지수</th><th>가수</th><th>바이어스</th><th>유효 숫자</th></tr></thead>
+<tbody>
+<tr><td>단정도 (float)</td><td>1</td><td>8</td><td>23</td><td>127</td><td>약 7자리</td></tr>
+<tr><td>배정도 (double)</td><td>1</td><td>11</td><td>52</td><td>1023</td><td>약 15~16자리</td></tr>
+</tbody></table></div>
+<div class="calc-ex">
+<p><strong>예제.</strong> −6.75 를 IEEE 754 단정도로 표현하라.</p>
+<details><summary>풀이</summary>
+<ol>
+<li>부호: 음수 → <strong>1</strong></li>
+<li>2진수 변환: 6.75 = 110.11₂</li>
+<li>정규화: 1.1011 × 2² (소수점 앞이 1 이 되게 이동)</li>
+<li>지수: 2 + 127 = 129 = <strong>10000001</strong></li>
+<li>가수: 정규화한 수의 소수점 아래 <strong>1011</strong> 뒤를 0 으로 채움 → <code>10110000000000000000000</code></li>
+<li>결과: <code>1 10000001 10110000000000000000000</code> = <strong>0xC0D80000</strong></li>
+</ol>
+<p>맨 앞의 1 은 항상 1 이므로 저장하지 않는다(숨은 비트). 그만큼 1비트의 정밀도를 더 얻는다.</p>
+</details>
+</div>
+<div class="table-wrap"><table>
+<thead><tr><th>특수 값</th><th>지수</th><th>가수</th></tr></thead>
+<tbody>
+<tr><td>±0</td><td>모두 0</td><td>0</td></tr>
+<tr><td>비정규 수 (0 에 가까운 수)</td><td>모두 0</td><td>0 아님</td></tr>
+<tr><td>±무한대</td><td>모두 1</td><td>0</td></tr>
+<tr><td>NaN</td><td>모두 1</td><td>0 아님</td></tr>
+</tbody></table></div>
+<ul>
+<li><strong>0.1 + 0.2 ≠ 0.3</strong>: 0.1 은 2진수로 무한 소수(0.000110011…)라 정확히 표현되지 않는다. → 실수 비교는 <code>|a − b| &lt; ε</code> 로, <strong>금액 계산은 정수(최소 화폐 단위)나 십진 타입(<code>BigDecimal</code>, <code>DECIMAL</code>)</strong> 으로 한다.</li>
+<li>큰 수와 아주 작은 수를 더하면 작은 수가 사라진다(정밀도 손실). 덧셈의 결합 법칙이 성립하지 않는다.</li>
+<li><code>NaN == NaN</code> 은 거짓이다.</li>
+</ul>
+<h3 id="endian">엔디안 (Endianness)</h3>
+<p>여러 바이트로 된 값을 메모리에 놓는 순서. <code>0x12345678</code> 을 주소 100 부터 저장하면:</p>
+<div class="table-wrap"><table>
+<thead><tr><th>주소</th><th>100</th><th>101</th><th>102</th><th>103</th></tr></thead>
+<tbody>
+<tr><td>빅 엔디안</td><td>12</td><td>34</td><td>56</td><td>78</td></tr>
+<tr><td>리틀 엔디안</td><td>78</td><td>56</td><td>34</td><td>12</td></tr>
+</tbody></table></div>
+<ul>
+<li><strong>빅 엔디안</strong>: 상위 바이트부터. 사람이 읽는 순서. <strong>네트워크 바이트 순서</strong>.</li>
+<li><strong>리틀 엔디안</strong>: 하위 바이트부터. x86, 대부분의 ARM 구성.</li>
+<li>서로 다른 시스템이 이진 데이터를 주고받을 때 변환이 필요하다(<code>htonl</code>, <code>ntohl</code>). JSON 같은 텍스트 형식은 이 문제가 없다.</li>
+</ul>
+</div>

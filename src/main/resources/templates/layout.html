@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title th:text="${page.slug == 'home'} ? 'CS 전공필기 개념 정리' : |${page.label} · CS 전공필기|">CS 전공필기 개념 정리</title>
+<meta name="description" content="컴퓨터공학 전공 개념 정리 노트 — 필기시험, 기술 면접, 현업 기초">
+<link rel="stylesheet" th:href="@{/css/note.css}">
+<script>
+  try {
+    var t = localStorage.getItem("cs_notes_theme_v1");
+    if (t) document.documentElement.setAttribute("data-theme", t);
+  } catch (e) {}
+</script>
+</head>
+<body th:attr="data-page=${page.slug}">
+<div id="reading-progress"></div>
+<header class="topbar">
+  <button id="sidebar-toggle-btn" class="icon-btn sidebar-toggle" title="목차 열기">☰</button>
+  <a class="brand" th:href="@{/}">📘 CS 전공필기 개념 정리 <span class="sub">필기시험 · 기술 면접 · 현업 기초</span></a>
+  <div class="spacer"></div>
+  <div class="progress-pill" id="progress-pill">학습 진행률 0/0 (0%)</div>
+  <button id="print-btn" class="icon-btn" title="인쇄 / PDF로 저장">🖨️</button>
+  <button id="theme-toggle" class="icon-btn" title="테마 전환">☀️</button>
+</header>
+
+<div class="app-shell">
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-search">
+      <input type="text" id="sidebar-search-input" placeholder="개념 검색 (예: 세마포어, JWT, 샤딩...)" autocomplete="off">
+    </div>
+    <div id="sidebar-search-results" hidden></div>
+    <div id="sidebar-nav-tree">
+      <a class="nav-home" th:href="@{/}">🏠 표지</a>
+      <th:block th:each="p : ${pages}" th:unless="${p.slug == 'home'}">
+        <details class="nav-part" th:each="part : ${p.parts}" th:attr="data-partid=${part.id}" th:open="${p.slug == page.slug}">
+          <summary>
+            <a class="nav-part-link" th:href="|${p.path}#${part.id}|" th:text="${part.title}">Part</a>
+            <span class="part-progress"></span>
+          </summary>
+          <ul class="nav-list">
+            <li class="nav-item" th:each="s : ${part.sections}" th:attr="data-navid=${s.id}">
+              <input type="checkbox" class="progress-check" th:attr="data-id=${s.id}" aria-label="학습 완료 표시">
+              <a th:href="|${p.path}#${s.id}|" th:text="${s.title}">Section</a>
+            </li>
+          </ul>
+        </details>
+      </th:block>
+    </div>
+  </nav>
+  <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+
+  <main id="main-content">
+    <nav class="page-tabs" id="page-tabs">
+      <a th:each="p : ${pages}" th:href="${p.path}" th:text="${p.label}" th:classappend="${p.slug == page.slug} ? 'active'">탭</a>
+    </nav>
+    <section class="page active" th:id="|page-${page.slug}|">
+      <div th:replace="~{__${page.template}__ :: content}"></div>
+      <div class="pager">
+        <a th:if="${prev}" th:href="${prev.path}" th:text="|← ${prev.label}|">이전</a><span th:unless="${prev}"></span>
+        <a th:if="${next}" th:href="${next.path}" th:text="|${next.label} →|">다음</a><span th:unless="${next}"></span>
+      </div>
+    </section>
+    <footer class="doc-footer">
+      <hr>
+      컴퓨터공학 전공 개념 정리 노트 — 필기시험 · 기술 면접 · 현업 기초.
+      학습 진행 상태는 이 브라우저(로컬 저장소)에만 저장됩니다.
+    </footer>
+  </main>
+  <aside class="page-toc" id="page-toc" aria-label="이 페이지 목차"></aside>
+</div>
+
+
+<button id="back-to-top" title="맨 위로">↑ 맨 위로</button>
+<button id="back-btn" title="링크로 이동하기 전 위치로 돌아가기" hidden>← 돌아가기</button>
+<button id="random-review" title="무작위 주제 복습">🎲 랜덤 복습</button>
+
+<script th:src="@{/js/note.js}" defer></script>
+</body>
+</html>

@@ -1,0 +1,1300 @@
+<div class="note-body" th:fragment="content" th:inline="none" xmlns:th="http://www.thymeleaf.org">
+<h1 id="part-2">Part 2. 네트워크</h1>
+<pre><code>네트워크 (Network)
+├─ 1. 계층 구조 (OSI 7 / TCP-IP)     🔥 ✍️
+├─ 2. TCP vs UDP                    🔥
+│   ├─ 3-way / 4-way Handshake      🔥 ✍️
+│   ├─ 흐름 제어 (Flow Control)       ⭐
+│   └─ 혼잡 제어 (Congestion Control) 🔥 ✍️
+├─ 3. IP / 주소 체계                  ⭐ 🧮
+│   ├─ 사설 IP / NAT
+│   ├─ 서브네팅
+│   └─ ARP / RARP / DHCP
+├─ 4. 네트워크 장비                    ⭐
+│   └─ 허브 vs 스위치 vs 라우터
+├─ 5. DNS                           ⭐ ✍️
+├─ 6. 보안                           🔥
+│   ├─ HTTP vs HTTPS / TLS
+│   ├─ 대칭키 vs 비대칭키
+│   ├─ ARP Spoofing / SYN Flooding / DoS·DDoS
+│   ├─ XSS vs CSRF
+│   ├─ Ping of Death / IP Spoofing / DRDoS
+│   └─ FTP 보안 (FTPS·SFTP, 능동/수동)
+├─ 7. 통신 모델                       △
+│   └─ Blocking / Sync
+├─ 8. 라우팅 테이블 · DV vs LS          🔥 🧮
+├─ 9. DHCP · VLSM · 네트워크 지연        🔥 🧮
+├─ 10. IPv4 → IPv6 전환 기법           🔥
+├─ 11. 다중 접근 · CDMA                🔥 🧮
+├─ 12. HTTP (버전 · 메서드 · 상태 코드 · 캐시)  🔥
+├─ 13. TLS 핸드셰이크                    ⭐
+├─ 14. URL 입력부터 화면까지              🔥
+├─ 15. 로드 밸런서 · 프록시 · CDN         ⭐
+├─ 16. 소켓 · I/O 멀티플렉싱              ⭐
+├─ 17. 데이터 링크 (오류 검출 · VLAN)      ⭐ 🧮
+└─ 18. ICMP · 진단 도구                  △
+</code></pre>
+<hr />
+<h2 id="2-1-osi-7-tcpip">2-1. OSI 7계층 &amp; TCP/IP <span class="badge badge-fire">🔥</span> <span class="badge badge-pencil">✍️</span></h2>
+<h3 id="_12">왜 계층으로 나누는가?</h3>
+<p>통신이라는 복잡한 문제를 <strong>독립적인 단계로 분할</strong>하기 위해. 각 계층은 인접 계층과의 인터페이스만 지키면 되므로, <strong>한 계층의 구현이 바뀌어도 다른 계층에 영향이 없다</strong>(모듈화, 캡슐화). 문제 발생 시 해당 계층만 조사하면 되어 <strong>문제 해결도 쉬워진다</strong>.</p>
+<h3 id="net-n1"><span class="badge badge-fire">🔥</span> 계층별 정리표 (매칭 문제 대비)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>OSI 7계층</th>
+<th>TCP/IP 4계층</th>
+<th>역할</th>
+<th>주요 프로토콜</th>
+<th>PDU</th>
+<th>장비</th>
+<th>주소</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>7. 응용 (Application)</strong></td>
+<td><strong>응용 (Application)</strong></td>
+<td>사용자 인터페이스, 서비스 제공</td>
+<td><strong>HTTP, FTP, DNS, POP3</strong>, SMTP, IMAP, Telnet, SSH, DHCP, SNMP</td>
+<td>Data / Message</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td><strong>6. 표현 (Presentation)</strong></td>
+<td>↑</td>
+<td>인코딩, 암호화, 압축</td>
+<td>JPEG, MPEG, ASCII, SSL/TLS</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><strong>5. 세션 (Session)</strong></td>
+<td>↑</td>
+<td>연결 세션 관리, 동기화</td>
+<td>NetBIOS, RPC</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><strong>4. 전송 (Transport)</strong></td>
+<td><strong>전송 (Transport)</strong></td>
+<td>종단 간(End-to-End) 신뢰성, 흐름/혼잡 제어</td>
+<td><strong>TCP, UDP</strong></td>
+<td>Segment(TCP)/Datagram(UDP)</td>
+<td>L4 스위치</td>
+<td><strong>포트 번호</strong></td>
+</tr>
+<tr>
+<td><strong>3. 네트워크 (Network)</strong></td>
+<td><strong>인터넷 (Internet)</strong></td>
+<td>라우팅, 논리 주소 지정</td>
+<td><strong>IP, ICMP</strong>, ARP<em>, RARP</em>, IGMP, OSPF</td>
+<td>Packet</td>
+<td><strong>라우터</strong>, L3 스위치</td>
+<td><strong>IP 주소</strong></td>
+</tr>
+<tr>
+<td><strong>2. 데이터링크 (Data Link)</strong></td>
+<td><strong>네트워크 접근 (Network Access / Link)</strong></td>
+<td>인접 노드 간 전송, 오류 검출, 흐름 제어</td>
+<td><strong>Ethernet</strong>, PPP, HDLC, ARP*</td>
+<td>Frame</td>
+<td><strong>L2 스위치</strong>, 브리지</td>
+<td><strong>MAC 주소</strong></td>
+</tr>
+<tr>
+<td><strong>1. 물리 (Physical)</strong></td>
+<td>↑</td>
+<td>비트를 전기/광 신호로 변환</td>
+<td>RS-232, IEEE 802.3</td>
+<td>Bit</td>
+<td><strong>허브</strong>, 리피터</td>
+<td>-</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p><strong>* ARP/RARP의 계층 논쟁</strong>: 교재마다 다르다. <strong>IP 주소↔MAC 주소를 다루므로 2·3계층 사이</strong>에 있다고 보는 게 정확하다. 시험 답안에는 <strong>"2계층과 3계층에 걸쳐 있으나, 통상 3계층(네트워크 계층)으로 분류한다"</strong> 고 쓰면 안전하다.</p>
+</blockquote>
+<h3 id="net-n2">매칭 정답 예시</h3>
+<blockquote>
+<p>주어진 10개: <code>DNS, POP3, ICMP, IP, ARP, Ethernet, TCP, HTTP, FTP, UDP</code></p>
+</blockquote>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>TCP/IP 계층</th>
+<th>배치</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>응용 (Application)</td>
+<td>DNS, POP3, HTTP, FTP</td>
+</tr>
+<tr>
+<td>전송 (Transport)</td>
+<td>TCP, UDP</td>
+</tr>
+<tr>
+<td>인터넷 (Network)</td>
+<td>IP, ICMP, ARP</td>
+</tr>
+<tr>
+<td>네트워크 접근 (Data Link / Physical)</td>
+<td>Ethernet</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="encapsulation">캡슐화(Encapsulation) <span class="badge badge-star">⭐</span></h3>
+<pre><code>송신 측 (아래로 내려가며 헤더 추가)
+  Application:  [        Data        ]
+  Transport:    [TCP 헤더][  Data  ]           → Segment
+  Network:      [IP 헤더][TCP][ Data ]          → Packet
+  Data Link:    [Eth 헤더][IP][TCP][Data][Eth 트레일러] → Frame
+  Physical:     101101010111...                → Bit
+
+수신 측은 역순으로 헤더를 벗겨냄 (역캡슐화, Decapsulation)
+</code></pre>
+<h3 id="n4-3">메일 프로토콜과 주요 포트</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>메일 프로토콜</th>
+<th>역할</th>
+<th>포트</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SMTP</td>
+<td>보내기</td>
+<td>25</td>
+</tr>
+<tr>
+<td>POP3</td>
+<td>받기 — 내려받고 서버 사본은 보통 삭제</td>
+<td>110</td>
+</tr>
+<tr>
+<td>IMAP</td>
+<td>받기 — 서버에 유지, 여러 기기 동기화</td>
+<td>143</td>
+</tr>
+</tbody>
+</table></div>
+<p><span class="badge badge-star">⭐</span> 주요 포트: FTP 20/21, SSH 22, Telnet 23, SMTP 25, DNS 53, DHCP 67/68, HTTP 80, POP3 110, IMAP 143, HTTPS 443.</p>
+<hr />
+<h2 id="2-2-tcp-vs-udp">2-2. TCP vs UDP <span class="badge badge-fire">🔥</span></h2>
+<p class="moved-stub">↗ 요약 페이지 · <a href="#tcp-vs-udp">TCP vs UDP 비교표</a></p>
+<h3 id="tcp-udp-service">서비스별 TCP/UDP 선택 — 근거 쓰는 법 <span class="badge badge-fire">🔥</span></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>서비스</th>
+<th>선택</th>
+<th>근거 (기능 이름으로 쓸 것)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>로그인</td>
+<td><strong>TCP</strong></td>
+<td>인증 정보가 하나라도 누락·순서 뒤바뀜이 있으면 안 됨 → 재전송·순서 보장</td>
+</tr>
+<tr>
+<td>DNS</td>
+<td><strong>UDP</strong></td>
+<td>질의/응답이 패킷 1개로 끝남 → 3-way 연결 비용이 낭비, 응답 없으면 응용(DNS 클라이언트)이 재질의. 단 512B 초과·존 전송은 TCP</td>
+</tr>
+<tr>
+<td>대량 파일 전송</td>
+<td><strong>TCP</strong></td>
+<td>무결성 필수, 흐름·혼잡 제어로 대용량 안정 전송</td>
+</tr>
+<tr>
+<td>화상회의</td>
+<td><strong>UDP</strong></td>
+<td>실시간성 우선, 약간의 손실 허용. TCP면 손실 패킷 재전송을 기다리느라 뒤 데이터가 막힘(<strong>Head-of-Line Blocking</strong>) → 지연 누적</td>
+</tr>
+<tr>
+<td>전자우편</td>
+<td><strong>TCP</strong></td>
+<td>SMTP/POP3/IMAP 모두 TCP, 메일 내용 누락 불가</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p>⚠️ <strong>표현 함정</strong>: "비트 손실 때문에 TCP"는 부정확하다. <strong>UDP도 체크섬으로 비트 오류는 검출</strong>한다. 차이는 <strong>손실된 패킷을 재전송하고 순서를 맞추느냐</strong>다. 답안에는 "TCP는 연결 지향이며 재전송·순서 보장·흐름/혼잡 제어를 제공하므로…"로 쓴다.</p>
+</blockquote>
+<hr />
+<h2 id="2-3-tcp-3-way-4-way-handshake">2-3. TCP 3-way / 4-way Handshake <span class="badge badge-fire">🔥</span> <span class="badge badge-calc">🧮</span> <span class="badge badge-pencil">✍️</span></h2>
+<h3 id="3-way-handshake">3-way Handshake (연결 수립)</h3>
+<pre><code>   Client                                Server
+     │                                     │  (LISTEN)
+     │ ──── ① SYN, seq = x ──────────────► │
+     │ (SYN_SENT)                          │  (SYN_RECEIVED)
+     │                                     │
+     │ ◄─── ② SYN + ACK, seq = y, ack = x+1 │
+     │ (ESTABLISHED)                       │
+     │                                     │
+     │ ──── ③ ACK, ack = y+1 ────────────► │
+     │                                     │  (ESTABLISHED)
+</code></pre>
+<p><strong>왜 3번인가? (2-way로는 안 되는 이유)</strong> — 서술 필수</p>
+<blockquote>
+<p>통신은 양방향이므로 <strong>양쪽 모두의 송신 능력과 수신 능력을 상호 확인</strong>해야 한다.
+- ①로 서버는 클라이언트의 송신 능력을 확인
+- ②로 클라이언트는 서버의 송수신 능력을 확인
+- ③이 있어야 <strong>서버가 클라이언트의 수신 능력을 확인</strong>할 수 있다</p>
+<p>또한 지연 도착한 <strong>오래된 중복 SYN(delayed duplicate)</strong> 으로 인해 엉뚱한 연결이 열리는 것을 막고, <strong>초기 시퀀스 번호(ISN)를 양방향으로 교환</strong>하기 위해서다.</p>
+</blockquote>
+<p class="moved-stub">↗ 부록 A · <a href="#appx-n1">빈칸 채우기</a></p>
+<h3 id="4-way-handshake">4-way Handshake (연결 종료)</h3>
+<pre><code>   Client                                Server
+     │ ──── ① FIN ────────────────────►    │
+     │ (FIN_WAIT_1)                        │  (CLOSE_WAIT)
+     │ ◄─── ② ACK ──────────────────────   │
+     │ (FIN_WAIT_2)                        │  ← 서버가 남은 데이터를 마저 전송
+     │ ◄─── ③ FIN ──────────────────────   │  (LAST_ACK)
+     │ (TIME_WAIT)                         │
+     │ ──── ④ ACK ────────────────────►    │  (CLOSED)
+     │ (일정 시간 대기 후 CLOSED)             │
+</code></pre>
+<p><strong>왜 연결은 4번인가?</strong>
+연결 수립 시엔 서버의 SYN과 ACK를 <strong>하나의 세그먼트로 합칠 수 있지만</strong>, 종료 시엔 클라이언트가 FIN을 보내도 <strong>서버는 아직 보낼 데이터가 남아있을 수 있다</strong>. 그래서 ACK를 먼저 보내 "종료 요청은 받았다"고 알린 뒤, 데이터를 다 보내고 나서 별도로 FIN을 보낸다. → <strong>Half-Close</strong> 상태가 존재하기 때문.</p>
+<p><strong>TIME_WAIT 상태가 필요한 이유</strong> (2가지) <span class="badge badge-star">⭐</span>
+1. 마지막 ACK가 유실될 경우 서버가 FIN을 재전송하므로, 이에 응답하기 위해 대기해야 한다
+2. 이전 연결의 지연된 패킷이 <strong>같은 포트를 재사용한 새 연결에 섞여 들어오는 것을 방지</strong></p>
+<hr />
+<h2 id="2-4-vs">2-4. 흐름 제어 vs 혼잡 제어 <span class="badge badge-fire">🔥</span></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th><strong>흐름 제어 (Flow Control)</strong></th>
+<th><strong>혼잡 제어 (Congestion Control)</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>목적</td>
+<td><strong>수신 측</strong>의 버퍼 오버플로 방지</td>
+<td><strong>네트워크(라우터)</strong>의 과부하 방지</td>
+</tr>
+<tr>
+<td>문제 상황</td>
+<td>송신자가 수신자보다 빠름</td>
+<td>전체 트래픽이 네트워크 용량 초과</td>
+</tr>
+<tr>
+<td>제어 대상</td>
+<td>송신자 ↔ 수신자 (End-to-End)</td>
+<td>송신자 ↔ 네트워크 전체</td>
+</tr>
+<tr>
+<td>사용 윈도우</td>
+<td><strong>rwnd</strong> (수신 윈도우, 수신자가 알려줌)</td>
+<td><strong>cwnd</strong> (혼잡 윈도우, 송신자가 추정)</td>
+</tr>
+<tr>
+<td>기법</td>
+<td>Stop-and-Wait, <strong>Sliding Window</strong></td>
+<td>Slow Start, Congestion Avoidance, Fast Retransmit/Recovery</td>
+</tr>
+</tbody>
+</table></div>
+<pre><code>실제 전송 윈도우 = min(rwnd, cwnd)   ← 둘 중 작은 값
+</code></pre>
+<h3 id="_13">흐름 제어 기법 <span class="badge badge-star">⭐</span></h3>
+<ul>
+<li><strong>Stop-and-Wait</strong>: 하나 보내고 ACK를 기다림. 단순하지만 매우 비효율적</li>
+<li><strong>Sliding Window</strong>: ACK를 기다리지 않고 <strong>윈도우 크기만큼 연속 전송</strong>. 수신자가 rwnd로 윈도우 크기를 통보</li>
+<li><strong>Silly Window Syndrome</strong>: 수신 버퍼가 조금씩만 비어 아주 작은 윈도우가 계속 광고되어 효율이 급락하는 현상 → <strong>Nagle 알고리즘</strong>(송신 측), <strong>Clark 방법 / 지연 ACK</strong>(수신 측)로 해결</li>
+</ul>
+<h3 id="net-n3"><span class="badge badge-fire">🔥</span> 혼잡 제어 4단계 — 그래프</h3>
+<pre><code>혼잡
+윈도우
+크기
+  12│                    ╱▔╲
+    │                 ╱     ╲
+  10│              ╱╱        ╲          ╱▔╲
+    │           ╱             ╲      ╱     ╲
+   6│        ╱                 ╲___╱        ╲
+    │     ╱╱                                 ╲
+   1│▁▁╱                                      ╲╱
+    └──────┬──────────┬──┬────────┬──┬──┬──────► 전송 수
+    0      6         10 11       14 15 17
+     ◄─(가)─►◄──(나)──►
+</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>단계</th>
+<th>이름</th>
+<th>동작</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>(가)</strong> 0~6</td>
+<td><strong>슬로 스타트 (Slow Start)</strong></td>
+<td>cwnd = 1부터 시작, ACK를 받을 때마다 <strong>cwnd를 2배씩 증가(지수적 증가)</strong>. <code>ssthresh</code>(임계값)에 도달하면 종료</td>
+</tr>
+<tr>
+<td><strong>(나)</strong> 6~10</td>
+<td><strong>혼잡 회피 (Congestion Avoidance)</strong></td>
+<td>ssthresh 도달 후, RTT마다 <strong>cwnd를 1씩 증가(선형 증가)</strong>. 조심스럽게 대역폭을 탐색</td>
+</tr>
+<tr>
+<td>11 지점</td>
+<td><strong>빠른 회복 (Fast Recovery)</strong></td>
+<td>cwnd를 <strong>1/2로 감소</strong> 후 혼잡 회피부터 재개</td>
+</tr>
+<tr>
+<td>15 지점</td>
+<td><strong>타임아웃(Timeout)</strong></td>
+<td>cwnd를 <strong>1로 초기화</strong>하고 슬로 스타트부터 재시작</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong><span class="badge badge-fire">🔥</span> 핵심 — "11번째 세그먼트 전송 시 윈도우가 1/2로 줄어든 이유"</strong></p>
+<blockquote>
+<p><strong>답</strong>: <strong>3중 중복 ACK(3 Duplicate ACK)</strong> 를 수신했기 때문이다.</p>
+<p>수신자가 순서에 맞지 않는 세그먼트를 받으면, 기대하는 세그먼트 번호로 중복 ACK를 계속 보낸다. 송신자가 동일한 ACK를 3번 연속(총 4번) 받으면 <strong>특정 세그먼트만 유실</strong>되었다고 판단한다. 이때 <strong>타임아웃을 기다리지 않고 즉시 재전송</strong>하는 것이 <strong>빠른 재전송(Fast Retransmit)</strong> 이고, 이어서 cwnd를 1로 떨어뜨리지 않고 <strong>절반으로만 줄여 혼잡 회피 단계부터 재개</strong>하는 것이 <strong>빠른 회복(Fast Recovery)</strong> 이다.</p>
+<p><strong>핵심 논리</strong>: 중복 ACK가 온다는 것은 <strong>뒤따르는 세그먼트들이 여전히 수신자에게 도착하고 있다</strong>는 뜻이므로, 네트워크가 완전히 막힌 것은 아니다. 따라서 타임아웃(완전 두절)보다 <strong>가볍게 대응</strong>하는 것이다.</p>
+</blockquote>
+<p><strong><span class="badge badge-fire">🔥</span> 타임아웃 vs 3중 중복 ACK — 반드시 구별</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>혼잡 감지 방법</th>
+<th>심각도 판단</th>
+<th>cwnd 처리</th>
+<th>이후 단계</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>3중 중복 ACK</strong></td>
+<td>가벼운 혼잡 (패킷은 흐르고 있음)</td>
+<td><strong>1/2로 감소</strong></td>
+<td>혼잡 회피부터 재개 (Fast Recovery)</td>
+</tr>
+<tr>
+<td><strong>타임아웃(Timeout)</strong></td>
+<td>심각한 혼잡 (연결 두절 수준)</td>
+<td><strong>1로 초기화</strong></td>
+<td>슬로 스타트부터 재시작</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p><strong>TCP Tahoe vs Reno</strong> <span class="badge badge-star">⭐</span>: Tahoe는 두 경우 모두 cwnd를 1로 떨어뜨린다. <strong>Reno는 3중 중복 ACK 시 1/2로만 줄인다(Fast Recovery 도입)</strong>. 그래프에서 1/2로 줄어드는 구간이 있으면 <strong>Reno</strong>다.</p>
+</blockquote>
+<hr />
+<h2 id="2-5-ip-ip-nat">2-5. IP 주소 / 사설 IP / NAT <span class="badge badge-star">⭐</span> <span class="badge badge-calc">🧮</span></h2>
+<h3 id="ipv4">IPv4 주소 클래스 (참고) <span class="badge badge-tri">△</span></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>클래스</th>
+<th>범위</th>
+<th>기본 서브넷 마스크</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A</td>
+<td>0.0.0.0 ~ 127.255.255.255</td>
+<td>/8 (255.0.0.0)</td>
+</tr>
+<tr>
+<td>B</td>
+<td>128.0.0.0 ~ 191.255.255.255</td>
+<td>/16 (255.255.0.0)</td>
+</tr>
+<tr>
+<td>C</td>
+<td>192.0.0.0 ~ 223.255.255.255</td>
+<td>/24 (255.255.255.0)</td>
+</tr>
+<tr>
+<td>D</td>
+<td>224~239 (멀티캐스트)</td>
+<td>-</td>
+</tr>
+<tr>
+<td>E</td>
+<td>240~255 (예약)</td>
+<td>-</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="ip"><span class="badge badge-fire">🔥</span> 사설 IP 대역 (암기)</h3>
+<pre><code>A 클래스: 10.0.0.0     ~ 10.255.255.255      (10.0.0.0/8)
+B 클래스: 172.16.0.0   ~ 172.31.255.255      (172.16.0.0/12)
+C 클래스: 192.168.0.0  ~ 192.168.255.255     (192.168.0.0/16)
+</code></pre>
+<h3 id="nat"><span class="badge badge-fire">🔥</span> 사설 네트워크의 외부 통신 구성 &amp; NAT</h3>
+<p><strong>구성 설명</strong></p>
+<pre><code>[PC 1] 192.168.0.2 ┐
+[PC 2] 192.168.0.3 ├─► [공유기/라우터]  ─── 인터넷 ───► [외부 서버]
+[PC 3] 192.168.0.4 ┘   내부: 192.168.0.1
+                        외부: 203.0.113.10 (공인 IP)
+                        └ NAT / NAPT(PAT) 수행
+</code></pre>
+<ol>
+<li>각 PC는 공유기의 <strong>DHCP 서버 기능</strong>을 통해 사설 IP를 할당받는다</li>
+<li>PC가 외부로 패킷을 보내면 기본 게이트웨이(공유기)로 전달된다</li>
+<li>공유기는 <strong>NAT(Network Address Translation)</strong> 를 수행하여, 패킷의 <strong>출발지 IP를 사설 IP → 공인 IP로 변환</strong>한다. 이때 <strong>출발지 포트 번호도 함께 고유한 값으로 변환</strong>하여 NAT 테이블에 기록한다 (<strong>NAPT / PAT, IP 마스커레이딩</strong>)</li>
+<li>외부 서버는 공인 IP로 응답을 보낸다</li>
+<li>공유기는 NAT 테이블의 <strong>포트 번호를 조회</strong>하여 어느 내부 PC의 응답인지 식별하고, 목적지 주소를 원래 사설 IP로 되돌려 전달한다</li>
+</ol>
+<blockquote>
+<p><strong>핵심</strong>: 사설 IP는 여러 대인데 공인 IP는 하나다. <strong>무엇으로 구별하는가? → 포트 번호</strong>. 이걸 쓰지 않으면 감점.</p>
+</blockquote>
+<p><strong>사설 IP를 구분해서 얻는 이점</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>이점</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>① IPv4 주소 고갈 완화</strong></td>
+<td>IPv4는 32비트로 약 43억 개뿐이다. 하나의 공인 IP로 수백 대의 내부 장비가 통신할 수 있어 <strong>주소 절약</strong> 효과가 크다</td>
+</tr>
+<tr>
+<td><strong>② 보안 향상</strong></td>
+<td>사설 IP는 인터넷에서 라우팅되지 않으므로 <strong>외부에서 내부 호스트로 직접 접근이 불가능</strong>하다. 자연스러운 방화벽 효과</td>
+</tr>
+<tr>
+<td><strong>③ 내부 네트워크 구성의 자율성</strong></td>
+<td>공인 IP를 새로 할당받지 않고도 내부에서 자유롭게 IP를 배정·재구성할 수 있다. ISP 변경 시에도 내부 구성 변경 불필요</td>
+</tr>
+<tr>
+<td><strong>④ 주소 중복 사용 가능</strong></td>
+<td>서로 다른 조직이 동일한 사설 대역(192.168.0.x)을 각자 쓸 수 있다</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>NAT의 단점</strong> (가점 요소): 종단 간(End-to-End) 연결성이 깨져 <strong>외부에서 내부로 먼저 연결을 시도하는 서비스(P2P, 서버 운영)가 어렵다</strong> → 포트 포워딩, STUN/TURN 등 별도 기법 필요</p>
+<p class="moved-stub">↗ 부록 A · <a href="#_14">서브네팅 계산</a></p>
+<hr />
+<h2 id="2-6-arp-rarp">2-6. ARP / RARP <span class="badge badge-fire">🔥</span></h2>
+<h3 id="_15">등장 배경</h3>
+<p>IP 주소는 <strong>논리 주소</strong>(3계층), MAC 주소는 <strong>물리 주소</strong>(2계층)다. 실제로 같은 LAN 안에서 프레임을 전달하려면 <strong>MAC 주소가 반드시 필요</strong>하다. 그런데 상위 계층은 IP 주소만 알고 있다. → <strong>IP ↔ MAC 변환 프로토콜이 필요</strong>하다.</p>
+<h3 id="arp-address-resolution-protocol">ARP (Address Resolution Protocol)</h3>
+<ul>
+<li><strong>정의</strong>: <strong>IP 주소를 이용해 해당 호스트의 MAC 주소를 알아내는 프로토콜</strong></li>
+<li><strong>필요성</strong>: 데이터링크 계층에서 프레임을 전송하려면 목적지 MAC 주소가 필요한데, 상위 계층은 IP 주소만 가지고 있다. 이 둘을 연결해 주어야 실제 전송이 가능하다.</li>
+<li><strong>동작</strong>:
+  1. 먼저 자신의 <strong>ARP 캐시 테이블</strong>을 조회. 있으면 그대로 사용
+  2. 없으면 <strong>ARP Request를 브로드캐스트</strong> (LAN의 모든 호스트에게 "이 IP 가진 사람 MAC 알려줘")
+  3. 해당 IP를 가진 호스트만 <strong>ARP Reply를 유니캐스트</strong>로 응답
+  4. 받은 정보를 ARP 캐시 테이블에 저장 (일정 시간 후 만료)</li>
+</ul>
+<blockquote>
+<p><strong>왜 Request는 브로드캐스트이고 Reply는 유니캐스트인가?</strong>
+요청 시점엔 <strong>누구에게 물어야 할지 모르므로</strong> 전체에게 물을 수밖에 없다. 응답 시점엔 요청 패킷 안에 <strong>요청자의 IP와 MAC이 이미 담겨 있으므로</strong> 그 대상에게만 직접 보내면 된다. (그림의 핵심)</p>
+</blockquote>
+<h3 id="rarp-reverse-arp">RARP (Reverse ARP)</h3>
+<ul>
+<li><strong>정의</strong>: <strong>MAC 주소를 이용해 자신의 IP 주소를 알아내는 프로토콜</strong> (ARP의 반대)</li>
+<li><strong>필요성</strong>: 디스크가 없는(diskless) 워크스테이션처럼 <strong>자신의 IP 주소를 저장할 수단이 없는 장비</strong>가, 부팅 시 자신의 MAC 주소를 근거로 <strong>RARP 서버에게 IP를 받아오기 위해</strong> 필요하다.</li>
+<li><strong>동작</strong>: 호스트가 RARP Request를 브로드캐스트 → <strong>RARP 서버</strong>가 미리 등록된 MAC-IP 매핑 표를 조회 → RARP Reply를 유니캐스트로 응답</li>
+<li><strong>현재</strong>: 기능이 제한적(IP만 알려줌)이어서 <strong>BOOTP를 거쳐 DHCP로 대체</strong>되었다. DHCP는 IP뿐 아니라 서브넷 마스크, 게이트웨이, DNS 서버 주소까지 알려준다.</li>
+</ul>
+<p class="moved-stub">↗ 요약 페이지 · <a href="#arp-vs-rarp">ARP vs RARP 비교</a></p>
+<h3 id="n4-4">ARP 캐시 vs MAC 주소 테이블 — 누가 무엇을 가지나</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>장치</th>
+<th>가진 표</th>
+<th>내용</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PC·서버·라우터</td>
+<td><strong>ARP 캐시</strong> (<code>arp -a</code>)</td>
+<td>IP → MAC (동적 항목은 몇 분 후 만료, 정적 항목은 고정)</td>
+</tr>
+<tr>
+<td>L2 스위치</td>
+<td><strong>MAC 주소 테이블</strong></td>
+<td>MAC → <strong>포트 번호</strong> (지나가는 프레임으로 스스로 학습)</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>ARP는 IP를 다루는 <strong>호스트·라우터</strong>의 기능이다. 스위치는 IP를 보지 않는다.</li>
+</ul>
+<hr />
+<h2 id="2-7">2-7. 네트워크 장비 <span class="badge badge-star">⭐</span></h2>
+<h3 id="vs-l2">허브 vs L2 스위치</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>항목</th>
+<th><strong>허브 (Hub)</strong></th>
+<th><strong>L2 스위치 (Switch)</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>동작 계층</td>
+<td><strong>1계층 (물리)</strong></td>
+<td><strong>2계층 (데이터링크)</strong></td>
+</tr>
+<tr>
+<td>판단 기준</td>
+<td>없음 (신호를 그냥 증폭·전달)</td>
+<td><strong>MAC 주소</strong></td>
+</tr>
+<tr>
+<td>전달 방식</td>
+<td>들어온 신호를 <strong>모든 포트로 플러딩(Flooding)</strong></td>
+<td><strong>MAC 주소 테이블</strong>을 보고 <strong>해당 포트로만 전달</strong></td>
+</tr>
+<tr>
+<td>대역폭</td>
+<td>전체 포트가 <strong>공유</strong> (10Mbps 허브 = 모두 합쳐 10Mbps)</td>
+<td>포트마다 <strong>전용</strong> 대역폭</td>
+</tr>
+<tr>
+<td><strong>충돌 도메인</strong></td>
+<td>전체가 <strong>하나</strong>의 충돌 도메인 → 충돌 빈번(CSMA/CD 필요)</td>
+<td><strong>포트마다 분리</strong> → 충돌 없음</td>
+</tr>
+<tr>
+<td>통신 방식</td>
+<td>반이중(Half-duplex)</td>
+<td><strong>전이중(Full-duplex)</strong> 가능</td>
+</tr>
+<tr>
+<td>보안</td>
+<td>모든 포트로 나가므로 <strong>스니핑에 취약</strong></td>
+<td>상대적으로 안전</td>
+</tr>
+<tr>
+<td>브로드캐스트 도메인</td>
+<td>하나</td>
+<td><strong>하나</strong> (스위치도 브로드캐스트는 못 막음)</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p><strong>MAC 주소 테이블 학습 원리</strong>: 스위치는 프레임이 들어오면 <strong>출발지 MAC과 들어온 포트 번호를 테이블에 기록</strong>한다(Learning). 목적지 MAC이 테이블에 없으면 일단 모든 포트로 플러딩하고, 응답이 오면 그때 학습한다.</p>
+</blockquote>
+<h3 id="l2-vs">L2 스위치 vs 라우터</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>항목</th>
+<th><strong>L2 스위치</strong></th>
+<th><strong>라우터 (Router)</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>동작 계층</td>
+<td>2계층 (데이터링크)</td>
+<td><strong>3계층 (네트워크)</strong></td>
+</tr>
+<tr>
+<td>판단 기준</td>
+<td><strong>MAC 주소</strong></td>
+<td><strong>IP 주소</strong></td>
+</tr>
+<tr>
+<td>참조 테이블</td>
+<td>MAC 주소 테이블</td>
+<td><strong>라우팅 테이블</strong></td>
+</tr>
+<tr>
+<td>역할 범위</td>
+<td><strong>같은 네트워크(LAN) 내부</strong> 전달</td>
+<td><strong>서로 다른 네트워크 간</strong> 연결</td>
+</tr>
+<tr>
+<td><strong>브로드캐스트 도메인</strong></td>
+<td><strong>분리 못 함</strong> (그대로 전파)</td>
+<td><strong>분리함</strong> (브로드캐스트를 차단)</td>
+</tr>
+<tr>
+<td>충돌 도메인</td>
+<td>포트마다 분리</td>
+<td>포트마다 분리</td>
+</tr>
+<tr>
+<td>경로 선택</td>
+<td>없음 (단순 스위칭)</td>
+<td><strong>최적 경로 선택</strong> (라우팅 프로토콜: RIP, OSPF, BGP)</td>
+</tr>
+<tr>
+<td>부가 기능</td>
+<td>VLAN</td>
+<td><strong>NAT, 방화벽, DHCP, ACL</strong></td>
+</tr>
+<tr>
+<td>속도</td>
+<td>빠름 (하드웨어 처리)</td>
+<td>상대적으로 느림 (헤더 분석 필요)</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p><strong>가장 중요한 구별점</strong>: <strong>브로드캐스트 도메인을 나눌 수 있는가?</strong>
+스위치는 못 하고(VLAN을 쓰면 가능), <strong>라우터는 한다</strong>. 그래서 브로드캐스트 폭풍(Broadcast Storm)을 막으려면 라우터가 필요하다.</p>
+<p><strong>L3 스위치</strong>는? 라우팅 기능을 하드웨어(ASIC)로 구현한 스위치. 라우터의 기능을 빠르게 수행하지만 WAN 인터페이스나 고급 기능은 제한적.</p>
+</blockquote>
+<hr />
+<h2 id="2-8-dns-domain-name-system">2-8. DNS (Domain Name System) <span class="badge badge-star">⭐</span> <span class="badge badge-pencil">✍️</span></h2>
+<h3 id="_16">정의</h3>
+<p>사람이 읽기 쉬운 <strong>도메인 이름을 IP 주소로 변환</strong>해 주는, <strong>계층적·분산적</strong> 데이터베이스 시스템.</p>
+<p><strong>왜 분산 구조인가?</strong> 단일 서버로 관리하면 (1) 단일 실패 지점(SPOF), (2) 트래픽 집중, (3) 물리적 거리로 인한 지연, (4) 유지보수 불가능 — 이 네 가지 문제가 생긴다.</p>
+<h3 id="_17">계층 구조</h3>
+<pre><code>             Root DNS 서버 (.)
+                    │
+      ┌─────────────┼─────────────┐
+   TLD(.com)     TLD(.kr)      TLD(.org)      ← Top Level Domain
+      │
+  Authoritative DNS 서버 (example.com)         ← 실제 레코드 보유
+</code></pre>
+<ul>
+<li><strong>Local DNS 서버(리졸버)</strong>: 사용자에게 가장 가까운 DNS. 캐싱을 담당한다.</li>
+</ul>
+<p class="moved-stub">↗ 요약 페이지 · <a href="#dns-3">DNS 레코드 타입 (3가지 이상 서술)</a></p>
+<h3 id="net-n5"><span class="badge badge-pencil">✍️</span> 재귀적 질의 vs 반복적 질의 (흐름도)</h3>
+<p><strong>재귀적 질의 (Recursive Query)</strong> — "네가 알아서 다 찾아서 답만 줘"</p>
+<pre><code>요청 호스트 ─①→ Local DNS ─②→ Root DNS
+                              ─③→ TLD DNS
+                              ─④→ Authoritative DNS
+                              ◄⑤─ (IP 응답)
+                     ◄⑥─ TLD가 전달
+            ◄⑦─ Root가 전달
+요청 호스트 ◄⑧─ Local DNS
+</code></pre>
+<p>→ <strong>질의를 받은 서버가 대신 다음 서버에 물어보고, 최종 답을 받아 되돌려 준다.</strong> 응답이 왔던 경로를 그대로 역순으로 돌아온다. 상위 서버의 부하가 크다.</p>
+<p><strong>반복적 질의 (Iterative Query)</strong> — "네가 아는 데까지만 알려줘, 나머진 내가 물어볼게"</p>
+<pre><code>요청 호스트 ─①→ Local DNS ─②→ Root DNS
+                            ◄③─ &quot;TLD 주소는 여기&quot;
+                            ─④→ TLD DNS
+                            ◄⑤─ &quot;Authoritative 주소는 여기&quot;
+                            ─⑥→ Authoritative DNS
+                            ◄⑦─ (IP 응답)
+요청 호스트 ◄⑧─ Local DNS
+</code></pre>
+<p>→ <strong>각 서버는 "다음에 물어볼 서버 주소"만 알려주고, Local DNS가 직접 순차적으로 질의</strong>한다. 상위 서버의 부하가 적어 <strong>실제 인터넷에서는 이 방식이 주로 쓰인다</strong>.</p>
+<blockquote>
+<p><strong>정리</strong>: 요청 호스트 ↔ Local DNS 구간은 <strong>재귀적</strong>, Local DNS ↔ 상위 서버 구간은 <strong>반복적</strong>인 것이 일반적인 실제 구성이다.</p>
+</blockquote>
+<hr />
+
+<h2 id="2-9-blockingnon-blocking-syncasync">2-9. Blocking/Non-blocking, Sync/Async <span class="badge badge-tri">△</span></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th><strong>Blocking</strong></th>
+<th><strong>Non-blocking</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>관점</td>
+<td><strong>제어권</strong>을 돌려주는가?</td>
+<td></td>
+</tr>
+<tr>
+<td>동작</td>
+<td>호출된 함수가 <strong>작업을 끝낼 때까지 제어권을 반환하지 않음</strong></td>
+<td>호출 즉시 <strong>제어권을 반환</strong>, 호출자는 다른 일을 할 수 있음</td>
+</tr>
+</tbody>
+</table></div>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th><strong>Synchronous (동기)</strong></th>
+<th><strong>Asynchronous (비동기)</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>관점</td>
+<td><strong>작업 완료 여부</strong>를 누가 신경 쓰는가?</td>
+<td></td>
+</tr>
+<tr>
+<td>동작</td>
+<td>호출자가 결과를 <strong>직접 챙김</strong>(완료 시점을 맞춤)</td>
+<td>콜백/이벤트로 <strong>나중에 통보받음</strong>(완료 시점을 신경 쓰지 않음)</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>4가지 조합</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>조합</th>
+<th>예시</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Blocking + Sync</td>
+<td>일반적인 파일 읽기 <code>read()</code> — 기다렸다가 결과 받음</td>
+</tr>
+<tr>
+<td>Non-blocking + Sync</td>
+<td><strong>폴링(Polling)</strong> — 즉시 반환받되 계속 "다 됐어?" 물어봄</td>
+</tr>
+<tr>
+<td>Blocking + Async</td>
+<td>Java의 <code>Future.get()</code> — 비동기로 던졌지만 결과를 기다림 (드묾)</td>
+</tr>
+<tr>
+<td>Non-blocking + Async</td>
+<td><strong>콜백, Promise, epoll/kqueue</strong> — 가장 효율적</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="2-10-routing">2-10. 라우팅 테이블 · 라우팅 프로토콜 <span class="badge badge-fire">🔥</span> <span class="badge badge-calc">🧮</span></h2>
+<h3 id="longest-prefix-match">라우팅 테이블 해석 — 최장 접두사 일치 (Longest Prefix Match) <span class="badge badge-calc">🧮</span></h3>
+<p><code>netstat -rn</code> 출력의 각 행: <strong>Destination(목적지 네트워크) / Gateway(다음 홉) / Genmask(마스크) / Flags / Interface</strong></p>
+<pre><code>판정 절차 (목적지 IP마다)
+① 목적지 IP AND Genmask  == Destination  인 행을 모두 찾는다
+② 여러 행이 맞으면 → 마스크가 가장 긴(1이 가장 많은 = 가장 구체적인) 행 선택
+③ 하나도 없으면 → 0.0.0.0 / 0.0.0.0 (기본 경로) → 기본 게이트웨이로 보냄
+
+마스크 범위 계산 예
+  255.255.255.255 (/32) → 그 호스트 1개만        (Flag H = Host 경로)
+  (설명용 예) 255.255.255.248 (/29) → 8개 블록: 172.16.0.16 ~ 172.16.0.23
+  (설명용 예) 255.255.128.0   (/17) → 3번째 옥텟 128단위: 172.16.128.0 ~ 172.16.255.255
+</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>의미</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>U</td>
+<td>Up — 경로 사용 가능</td>
+</tr>
+<tr>
+<td>G</td>
+<td>Gateway — 직접 연결이 아니라 게이트웨이(라우터)를 경유</td>
+</tr>
+<tr>
+<td>H</td>
+<td>Host — 목적지가 네트워크가 아니라 단일 호스트(/32)</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p>⚠️ <strong>함정</strong>: 블록 크기 = <strong>256 − 그 옥텟의 마스크 값</strong>. 마스크 128이면 128단위, 192면 64단위, 248이면 8단위. 목적지 IP가 그 블록 범위에 드는지로 판정하고, 여러 행이 맞으면 <strong>더 긴 마스크</strong>가 이긴다.</p>
+</blockquote>
+<h3 id="default-gateway">기본 게이트웨이(Default Gateway)의 역할 <span class="badge badge-fire">🔥</span></h3>
+<p>라우팅 테이블에 <strong>일치하는 항목이 없는 모든 패킷을 보내는 출구</strong>. 호스트가 모든 목적지 경로를 알 수 없으므로, 모르는 목적지는 기본 게이트웨이(보통 외부와 연결된 라우터)에 맡겨 <strong>다른 네트워크(인터넷)로 나가는 관문</strong> 역할을 한다. 라우팅 테이블 크기를 줄이는 효과도 있다.</p>
+<h3 id="static-vs-dynamic-routing">정적 라우팅 vs 동적 라우팅 <span class="badge badge-star">⭐</span></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>정적(Static)</th>
+<th>동적(Dynamic)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>경로 설정</td>
+<td>관리자가 수동 입력</td>
+<td>라우터끼리 경로 정보를 교환해 자동 계산</td>
+</tr>
+<tr>
+<td>변화 대응</td>
+<td>장애 시 수동 수정</td>
+<td>자동 우회</td>
+</tr>
+<tr>
+<td>부하</td>
+<td>없음</td>
+<td>라우팅 메시지·계산 부하</td>
+</tr>
+<tr>
+<td>적합</td>
+<td>소규모·변화 적은 망, 기본 경로</td>
+<td>대규모·변화 많은 망</td>
+</tr>
+</tbody>
+</table></div>
+<p class="moved-stub">↗ 요약 페이지 · <a href="#dv-vs-ls">거리 벡터 vs 링크 상태</a></p>
+<hr />
+<h2 id="2-11-dhcp-vlsm-delay">2-11. DHCP · VLSM 서브네팅 · 네트워크 지연 <span class="badge badge-fire">🔥</span> <span class="badge badge-calc">🧮</span></h2>
+<p class="moved-stub">↗ 요약 페이지 · <a href="#dhcp">DHCP (Dynamic Host Configuration Protocol)</a></p>
+<p class="moved-stub">↗ 부록 A · <a href="#vlsm">VLSM (가변 길이 서브넷 마스크) 할당</a></p>
+<hr />
+<h2 id="2-12-ipv6-transition">2-12. IPv4 → IPv6 전환 기법 <span class="badge badge-fire">🔥</span></h2>
+<p><strong>등장 배경</strong>: IPv4(32비트, 약 43억 개) 주소 고갈 → IPv6(128비트). 그러나 두 프로토콜은 <strong>헤더 형식이 달라 직접 통신 불가</strong>하고, 전 세계 망을 한 번에 바꿀 수 없다 → 공존 기간의 전환 기법이 필요하다.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>기법</th>
+<th>동작</th>
+<th>쓰는 상황</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>이중 스택</strong> (Dual Stack)</td>
+<td>호스트·라우터에 <strong>IPv4와 IPv6 스택을 모두 탑재</strong>, 상대에 맞춰 선택 (DNS가 AAAA 주면 IPv6, A 주면 IPv4)</td>
+<td>장비가 둘 다 지원 가능할 때. 가장 기본</td>
+</tr>
+<tr>
+<td><strong>터널링</strong> (Tunneling)</td>
+<td>IPv6 패킷을 <strong>IPv4 패킷에 통째로 캡슐화</strong>해 IPv4 구간을 통과, 반대편에서 꺼냄 (6to4, ISATAP)</td>
+<td><strong>양 끝은 IPv6, 가운데 구간이 IPv4</strong></td>
+</tr>
+<tr>
+<td><strong>헤더 변환</strong> (Header Translation)</td>
+<td>중간 장비(NAT64 등)가 <strong>IPv6 헤더 ↔ IPv4 헤더를 직접 변환</strong></td>
+<td><strong>한쪽은 IPv6만, 다른 쪽은 IPv4만</strong> 지원</td>
+</tr>
+</tbody>
+</table></div>
+<pre><code>[터널링]   IPv6 ─▶ [IPv4 헤더 | IPv6 헤더 | 데이터] ─(IPv4 망)─▶ 역캡슐화 ─▶ IPv6
+[헤더 변환] IPv6 전용 ─▶ [IPv6|데이터] ─▶ 변환기 ─▶ [IPv4|데이터] ─▶ IPv4 전용
+</code></pre>
+<ul>
+<li><strong>헤더 변환의 단점</strong>: IPv6에만 있는 필드(흐름 레이블 등)는 대응 필드가 없어 <strong>정보가 손실</strong>될 수 있음 → 다른 방법이 없을 때 쓰는 최후 수단</li>
+<li>터널링은 <strong>VPN 터널링(3-1)</strong>과 같은 캡슐화 원리</li>
+</ul>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>IPv4 vs IPv6 <span class="badge badge-star">⭐</span></th>
+<th>IPv4</th>
+<th>IPv6</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>주소 길이</td>
+<td>32비트</td>
+<td>128비트</td>
+</tr>
+<tr>
+<td>헤더</td>
+<td>가변(20~60B), 체크섬 있음</td>
+<td><strong>고정 40B</strong>, 체크섬 제거(처리 단순화)</td>
+</tr>
+<tr>
+<td>주소 유형</td>
+<td>유니·멀티·<strong>브로드캐스트</strong></td>
+<td>유니·멀티·<strong>애니캐스트</strong> (브로드캐스트 없음)</td>
+</tr>
+<tr>
+<td>보안</td>
+<td>IPsec 선택</td>
+<td>IPsec 기본 지원</td>
+</tr>
+<tr>
+<td>주소 설정</td>
+<td>수동/DHCP</td>
+<td>자동 설정(SLAAC) 가능</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="2-13-cdma">2-13. 다중 접근 프로토콜 · CDMA <span class="badge badge-fire">🔥</span> <span class="badge badge-calc">🧮</span></h2>
+<p><strong>등장 배경</strong>: 여러 노드가 <strong>하나의 채널을 공유</strong>하면 신호가 섞인다 → 매체 접근 제어(MAC)가 필요.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>분류</th>
+<th>방식</th>
+<th>비유</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>채널 분할</td>
+<td><strong>FDMA</strong> (주파수 분할)</td>
+<td>방을 칸막이로 나눠 각자 다른 칸에서 대화</td>
+</tr>
+<tr>
+<td></td>
+<td><strong>TDMA</strong> (시간 분할)</td>
+<td>한 명씩 차례로 말함</td>
+</tr>
+<tr>
+<td></td>
+<td><strong>CDMA</strong> (코드 분할)</td>
+<td><strong>모두 동시에 말하지만 각자 다른 언어</strong> — 듣는 사람은 자기 언어만 알아들음</td>
+</tr>
+<tr>
+<td>랜덤 접근</td>
+<td>ALOHA, CSMA/CD(유선), CSMA/CA(무선)</td>
+<td>비어 있으면 말하고, 부딪히면 재시도</td>
+</tr>
+<tr>
+<td>순번</td>
+<td>폴링, 토큰 패싱</td>
+<td>사회자가 순서를 정함</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="cdma-orthogonal">CDMA 원리 — 직교(Orthogonal) 칩 순열</h3>
+<p>각 노드의 칩 순열은 <strong>서로 내적하면 0</strong>, <strong>자기 자신과 내적하면 칩 수 m</strong>이 되도록 설계된다(Walsh 코드).</p>
+<pre><code>c1 = (+1, +1, +1, +1)     c1·c2 = 1 − 1 + 1 − 1 = 0   ← 서로 다르면 0
+c2 = (+1, −1, +1, −1)     c2·c2 = 1 + 1 + 1 + 1 = 4   ← 자기 자신이면 m
+c3 = (+1, +1, −1, −1)
+c4 = (+1, −1, −1, +1)
+</code></pre>
+<p>→ 여러 신호를 <strong>더해서 보내도</strong>, 받는 쪽에서 원하는 노드의 칩으로 내적하면 <strong>다른 노드 신호는 0으로 소거</strong>되고 그 노드의 데이터만 남는다.</p>
+<h3 id="cdma-calc">CDMA 계산 절차 <span class="badge badge-calc">🧮</span></h3>
+<pre><code>1. 비트 코딩   : 0 → −1,  1 → +1,  보내지 않음(idle) → 0
+2. 부호화      : 출력 신호 = d × c   (칩마다 곱)
+3. 공통 채널   : 모든 노드 출력을 칩 위치별로 더함  Σ dᵢ·cᵢ
+4. 복호화      : (채널 신호 · cₖ) ÷ m
+                 → +1이면 비트 1, −1이면 비트 0, 0이면 그 노드는 송신 안 함
+
+예) 노드1·2가 0, 노드3 idle, 노드4가 1
+  출력: 노드1 (−1,−1,−1,−1)  노드2 (−1,+1,−1,+1)  노드3 (0,0,0,0)  노드4 (+1,−1,−1,+1)
+  채널: (−1, −1, −3, +1)
+  c2로 복호화: (−1)(+1)+(−1)(−1)+(−3)(+1)+(+1)(−1) = −4 → −4÷4 = −1 → 비트 0  ✓
+  c4로 검증  : (−1)(+1)+(−1)(−1)+(−3)(−1)+(+1)(+1) = 4 → +1 → 비트 1  ✓
+  c3로 검증  : −1 −1 +3 −1 = 0 → 노드3은 송신하지 않음  ✓
+</code></pre>
+<blockquote>
+<p>⚠️ <strong>함정</strong>: ① 내적 뒤 <strong>칩 수 m으로 나누기</strong>를 빠뜨리지 말 것 ② idle 노드는 −1이 아니라 <strong>0</strong> ③ 답을 낸 뒤 다른 노드로 복호화해 원 데이터와 대조하면 검산이 된다.</p>
+</blockquote>
+<hr />
+<h2 id="2-14-http">2-14. HTTP — 버전 · 메서드 · 상태 코드 · 캐시 <span class="badge badge-fire">🔥</span></h2>
+<h3 id="net-t1">HTTP의 두 가지 성질</h3>
+<ul>
+<li><strong>무상태(Stateless)</strong>: 서버가 이전 요청을 기억하지 않는다. → 서버를 늘리기 쉽다(확장성). 대신 로그인 같은 상태는 <strong>쿠키·세션·토큰</strong>으로 따로 유지한다.</li>
+<li><strong>비연결(Connectionless)</strong>: 요청-응답 후 연결을 끊는 것이 기본. → HTTP/1.1부터 <strong>Keep-Alive(지속 연결)</strong> 가 기본이 되어 연결을 재사용한다.</li>
+</ul>
+<h3 id="http-versions">버전별 비교</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>구분</th><th>HTTP/1.1</th><th>HTTP/2</th><th>HTTP/3</th></tr></thead>
+<tbody>
+<tr><td>전송 계층</td><td>TCP</td><td>TCP</td><td><strong>QUIC (UDP 기반)</strong></td></tr>
+<tr><td>메시지 형식</td><td>텍스트</td><td><strong>바이너리 프레임</strong></td><td>바이너리 프레임</td></tr>
+<tr><td>동시 요청</td><td>연결당 한 번에 하나 (브라우저가 도메인당 연결 6개)</td><td>한 연결에서 <strong>멀티플렉싱</strong>(스트림)</td><td>멀티플렉싱</td></tr>
+<tr><td>헤더</td><td>매번 전체 전송</td><td><strong>HPACK 압축</strong></td><td>QPACK 압축</td></tr>
+<tr><td>HOL 블로킹</td><td>응용 계층에서 발생</td><td>응용 계층은 해결, <strong>TCP 계층에는 남음</strong></td><td><strong>스트림 단위로 독립</strong> → 해결</td></tr>
+<tr><td>연결 수립</td><td>TCP 3-way + TLS</td><td>TCP 3-way + TLS</td><td><strong>QUIC 핸드셰이크에 TLS 1.3 통합</strong> (1-RTT, 재접속 0-RTT)</td></tr>
+</tbody></table></div>
+<ul>
+<li><strong>HOL(Head-of-Line) 블로킹</strong>: 앞의 것이 막혀 뒤의 것까지 기다리는 현상. HTTP/2는 한 TCP 연결에 스트림을 섞어 보내므로 패킷 하나가 유실되면 TCP가 순서를 맞추느라 <strong>모든 스트림이 멈춘다</strong>. QUIC은 스트림마다 순서를 따로 관리해 이를 피한다.</li>
+<li>QUIC은 연결을 IP·포트가 아닌 <strong>연결 ID</strong>로 식별하므로 Wi-Fi ↔ LTE 전환에도 연결이 유지된다.</li>
+</ul>
+<h3 id="http-methods">메서드 — 안전 · 멱등</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>메서드</th><th>용도</th><th>안전(Safe)</th><th>멱등(Idempotent)</th><th>본문</th></tr></thead>
+<tbody>
+<tr><td>GET</td><td>조회</td><td>✅</td><td>✅</td><td>없음</td></tr>
+<tr><td>HEAD</td><td>헤더만 조회</td><td>✅</td><td>✅</td><td>없음</td></tr>
+<tr><td>POST</td><td>생성, 처리 요청</td><td>❌</td><td>❌</td><td>있음</td></tr>
+<tr><td>PUT</td><td><strong>전체</strong> 교체 (없으면 생성)</td><td>❌</td><td>✅</td><td>있음</td></tr>
+<tr><td>PATCH</td><td><strong>부분</strong> 수정</td><td>❌</td><td>❌ (구현에 따라)</td><td>있음</td></tr>
+<tr><td>DELETE</td><td>삭제</td><td>❌</td><td>✅</td><td>선택</td></tr>
+<tr><td>OPTIONS</td><td>지원 메서드 확인 (CORS 사전 요청)</td><td>✅</td><td>✅</td><td>없음</td></tr>
+</tbody></table></div>
+<ul>
+<li><strong>안전</strong>: 서버 상태를 바꾸지 않는다. <strong>멱등</strong>: 같은 요청을 여러 번 보내도 결과 상태가 한 번 보낸 것과 같다.</li>
+<li>멱등성이 중요한 이유: 응답을 못 받았을 때 <strong>재시도해도 되는지</strong>를 결정한다. POST 결제 요청은 재시도하면 중복 결제가 될 수 있어 <strong>멱등 키</strong>를 따로 둔다.</li>
+</ul>
+<h3 id="http-status">상태 코드</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>코드</th><th>의미</th><th>기억할 것</th></tr></thead>
+<tbody>
+<tr><td>200 OK / 201 Created / 204 No Content</td><td>성공</td><td>201 은 생성, 204 는 본문 없음</td></tr>
+<tr><td>301 / 308</td><td>영구 이동</td><td>308 은 메서드 유지</td></tr>
+<tr><td>302 / 307</td><td>임시 이동</td><td>307 은 메서드 유지</td></tr>
+<tr><td>304 Not Modified</td><td>캐시 사용</td><td>조건부 요청의 응답</td></tr>
+<tr><td>400 Bad Request</td><td>요청 형식 오류</td><td></td></tr>
+<tr><td><strong>401 Unauthorized</strong></td><td><strong>인증</strong> 안 됨 (누구인지 모름)</td><td>로그인 필요</td></tr>
+<tr><td><strong>403 Forbidden</strong></td><td><strong>인가</strong> 안 됨 (누구인지는 알지만 권한 없음)</td><td></td></tr>
+<tr><td>404 Not Found</td><td>자원 없음</td><td></td></tr>
+<tr><td>409 Conflict</td><td>상태 충돌</td><td>중복 생성, 버전 충돌</td></tr>
+<tr><td>429 Too Many Requests</td><td>요청 한도 초과</td><td>Rate Limit</td></tr>
+<tr><td>500 Internal Server Error</td><td>서버 내부 오류</td><td></td></tr>
+<tr><td>502 Bad Gateway</td><td>게이트웨이가 뒤 서버에서 <strong>잘못된 응답</strong>을 받음</td><td>뒤 서버 다운</td></tr>
+<tr><td>503 Service Unavailable</td><td>일시적 과부하·점검</td><td></td></tr>
+<tr><td>504 Gateway Timeout</td><td>게이트웨이가 뒤 서버 응답을 <strong>시간 안에 못 받음</strong></td><td>뒤 서버 지연</td></tr>
+</tbody></table></div>
+<h3 id="cookie-vs-session">쿠키 vs 세션</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>구분</th><th>쿠키</th><th>세션</th></tr></thead>
+<tbody>
+<tr><td>저장 위치</td><td>브라우저</td><td>서버 (메모리, Redis 등)</td></tr>
+<tr><td>전달</td><td>요청마다 <code>Cookie</code> 헤더로 자동 전송</td><td>세션 ID 만 쿠키로 전달</td></tr>
+<tr><td>보안</td><td>탈취·변조 위험</td><td>상대적으로 안전</td></tr>
+<tr><td>서버 부담</td><td>없음</td><td>저장소 필요, 서버 여러 대면 <strong>세션 공유</strong> 문제</td></tr>
+</tbody></table></div>
+<p>쿠키 보안 속성: <code>HttpOnly</code>(스크립트 접근 차단 → XSS 로 탈취 방지), <code>Secure</code>(HTTPS 에서만 전송), <code>SameSite</code>(다른 사이트에서 온 요청에 쿠키를 붙이지 않음 → CSRF 방어).</p>
+<h3 id="http-cache">HTTP 캐시</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>헤더</th><th>역할</th></tr></thead>
+<tbody>
+<tr><td><code>Cache-Control: max-age=3600</code></td><td>3600초 동안 서버에 묻지 않고 캐시 사용</td></tr>
+<tr><td><code>Cache-Control: no-cache</code></td><td>캐시는 하되 <strong>쓸 때마다 서버에 검증</strong></td></tr>
+<tr><td><code>Cache-Control: no-store</code></td><td>저장 자체를 금지 (민감 정보)</td></tr>
+<tr><td><code>ETag</code> / <code>If-None-Match</code></td><td>내용의 지문. 같으면 <code>304</code> 로 본문 생략</td></tr>
+<tr><td><code>Last-Modified</code> / <code>If-Modified-Since</code></td><td>수정 시각 기반 검증</td></tr>
+</tbody></table></div>
+<blockquote>
+<p><code>no-cache</code> 는 "캐시하지 마라"가 아니라 <strong>"검증 없이 쓰지 마라"</strong> 다. 저장 금지는 <code>no-store</code>.</p>
+</blockquote>
+<hr />
+<h2 id="2-15-tls">2-15. TLS 핸드셰이크 <span class="badge badge-star">⭐</span></h2>
+<p>TLS 가 주는 것 세 가지: <strong>기밀성</strong>(대칭키 암호화), <strong>무결성</strong>(MAC/AEAD), <strong>인증</strong>(인증서).</p>
+<h3 id="net-t2">TLS 1.2 vs 1.3</h3>
+<pre><code>TLS 1.3 (1-RTT)
+Client                                   Server
+  │── ClientHello (+ 키 공유 값) ──────────▶│
+  │◀─ ServerHello (+ 키 공유 값)            │
+  │◀─ {인증서, 서명, Finished}  ← 암호화됨   │
+  │── {Finished} ─────────────────────────▶│
+  │◀══════════ 암호화된 데이터 ═════════════▶│
+</code></pre>
+<div class="table-wrap"><table>
+<thead><tr><th>구분</th><th>TLS 1.2</th><th>TLS 1.3</th></tr></thead>
+<tbody>
+<tr><td>왕복 횟수</td><td>2-RTT</td><td><strong>1-RTT</strong> (재접속 0-RTT)</td></tr>
+<tr><td>키 교환</td><td>RSA 키 전송 또는 (EC)DHE</td><td><strong>(EC)DHE 만 허용</strong></td></tr>
+<tr><td>순방향 비밀성</td><td>선택</td><td><strong>항상 보장</strong></td></tr>
+<tr><td>암호</td><td>CBC, RC4 등 취약 알고리즘 포함</td><td>AEAD(AES-GCM, ChaCha20-Poly1305)만</td></tr>
+<tr><td>인증서 노출</td><td>평문</td><td>암호화됨</td></tr>
+</tbody></table></div>
+<ul>
+<li><strong>순방향 비밀성(Forward Secrecy)</strong>: 서버의 장기 개인키가 훗날 유출되어도 <strong>과거에 녹음된 통신을 복호화할 수 없는</strong> 성질. 세션마다 임시 키로 DH 교환을 하기 때문이다.</li>
+<li><strong>하이브리드 암호</strong>: 공개키 방식은 느리므로 <strong>키 교환·인증에만</strong> 쓰고, 실제 데이터는 합의한 <strong>대칭키</strong>로 암호화한다.</li>
+<li><strong>인증서 검증</strong>: 서버 인증서 → 중간 CA → 루트 CA 로 서명 사슬을 따라가 브라우저에 내장된 루트 인증서에 닿는지 확인하고, 유효 기간·도메인 일치·폐기 여부(CRL/OCSP)를 본다.</li>
+<li><strong>SNI</strong>: 하나의 IP 에 여러 도메인이 있을 때 ClientHello 에 도메인 이름을 실어 서버가 맞는 인증서를 고르게 한다.</li>
+<li><strong>mTLS</strong>: 서버뿐 아니라 <strong>클라이언트도 인증서</strong>를 제시한다. 서비스 간 통신, 금융 API 에서 쓴다.</li>
+</ul>
+<hr />
+<h2 id="2-16-url-flow">2-16. 주소창에 URL 을 입력하면 일어나는 일 <span class="badge badge-fire">🔥</span></h2>
+<p>면접 단골이자 네트워크 전 범위를 한 번에 훑는 문제다. <strong>계층을 따라 내려갔다가 올라오는 순서</strong>로 답한다.</p>
+<ol>
+<li><strong>URL 해석</strong>: 스킴(https), 호스트, 포트(443), 경로를 분리. HSTS 목록에 있으면 강제로 HTTPS.</li>
+<li><strong>DNS 조회</strong>: 브라우저 캐시 → OS 캐시(hosts) → 로컬 DNS 서버 → (없으면) 루트 → TLD → 권한 네임 서버 순으로 재귀/반복 질의. → <a href="#2-8-dns-domain-name-system">DNS</a></li>
+<li><strong>경로 결정</strong>: 목적지가 같은 서브넷이 아니면 <strong>기본 게이트웨이</strong>로 보낸다. 게이트웨이의 MAC 주소는 <strong>ARP</strong> 로 알아낸다. → <a href="#2-6-arp-rarp">ARP</a></li>
+<li><strong>TCP 연결</strong>: 3-way Handshake. → <a href="#2-3-tcp-3-way-4-way-handshake">Handshake</a></li>
+<li><strong>TLS 핸드셰이크</strong>: 인증서 검증, 키 합의.</li>
+<li><strong>HTTP 요청 전송</strong>: 요청은 사설 IP → <strong>NAT</strong> → 공인 IP 로 바뀌어 인터넷을 지나고, 라우터들이 <strong>최장 접두사 일치</strong>로 전달한다.</li>
+<li><strong>서버 측</strong>: CDN/로드 밸런서 → 웹 서버(리버스 프록시) → 애플리케이션 서버 → 캐시/DB.</li>
+<li><strong>HTTP 응답</strong>: 상태 코드, 헤더, 본문(HTML).</li>
+<li><strong>렌더링</strong>: HTML 파싱 → DOM, CSS 파싱 → CSSOM, 둘을 합쳐 렌더 트리 → 레이아웃 → 페인트. 도중에 만난 CSS·JS·이미지는 추가 요청한다.</li>
+<li><strong>연결 유지/종료</strong>: Keep-Alive 로 재사용하다가 4-way Handshake 로 종료.</li>
+</ol>
+<blockquote>
+<p>답변 요령: 질문자가 깊이 들어가길 원하는 지점(DNS, TCP, TLS, 렌더링)을 스스로 하나 골라 <strong>한 단계 더</strong> 설명하면 좋은 평가를 받는다.</p>
+</blockquote>
+<hr />
+<h2 id="2-17-lb-proxy-cdn">2-17. 로드 밸런서 · 프록시 · CDN <span class="badge badge-star">⭐</span></h2>
+<h3 id="l4-vs-l7">L4 vs L7 로드 밸런서</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>구분</th><th>L4 로드 밸런서</th><th>L7 로드 밸런서</th></tr></thead>
+<tbody>
+<tr><td>판단 기준</td><td>IP, 포트 (전송 계층)</td><td>URL 경로, 헤더, 쿠키 (응용 계층)</td></tr>
+<tr><td>패킷 내용</td><td>보지 않음</td><td><strong>HTTP 메시지를 해석</strong></td></tr>
+<tr><td>속도</td><td>빠름</td><td>상대적으로 느림 (TLS 종료 포함)</td></tr>
+<tr><td>기능</td><td>단순 분산</td><td>경로 기반 라우팅, 스티키 세션, 인증, 압축, WAF 연동</td></tr>
+<tr><td>예</td><td>AWS NLB, LVS</td><td>AWS ALB, Nginx, HAProxy</td></tr>
+</tbody></table></div>
+<p><strong>분산 알고리즘</strong></p>
+<div class="table-wrap"><table>
+<thead><tr><th>알고리즘</th><th>방식</th><th>적합</th></tr></thead>
+<tbody>
+<tr><td>라운드 로빈</td><td>순서대로</td><td>서버 성능이 같고 요청이 균일</td></tr>
+<tr><td>가중 라운드 로빈</td><td>성능에 비례한 가중치</td><td>서버 사양이 다름</td></tr>
+<tr><td>최소 연결</td><td>현재 연결이 가장 적은 서버</td><td>요청 처리 시간이 들쭉날쭉</td></tr>
+<tr><td>IP 해시</td><td>클라이언트 IP 를 해시</td><td>같은 사용자를 같은 서버로 (세션 고정)</td></tr>
+<tr><td>일관성 해싱</td><td>해시 링</td><td>서버 증감 시 재배치를 최소화 (캐시 서버)</td></tr>
+</tbody></table></div>
+<ul>
+<li><strong>헬스 체크</strong>: 주기적으로 서버 상태를 확인해 죽은 서버를 분산 대상에서 뺀다.</li>
+<li><strong>스티키 세션</strong>: 한 사용자를 같은 서버에 고정. 간단하지만 서버가 죽으면 세션이 사라지고 부하가 쏠린다. → 세션을 <strong>Redis 같은 외부 저장소</strong>에 두거나 토큰 방식을 쓰는 편이 낫다.</li>
+<li>로드 밸런서 자체가 <strong>단일 장애점(SPOF)</strong> 이 되지 않도록 Active-Standby 로 이중화한다.</li>
+</ul>
+<h3 id="forward-vs-reverse-proxy">포워드 프록시 vs 리버스 프록시</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>구분</th><th>포워드 프록시</th><th>리버스 프록시</th></tr></thead>
+<tbody>
+<tr><td>위치</td><td><strong>클라이언트 앞</strong></td><td><strong>서버 앞</strong></td></tr>
+<tr><td>누구를 숨기나</td><td>클라이언트</td><td>서버</td></tr>
+<tr><td>용도</td><td>사내 접근 통제, 캐싱, 우회</td><td>로드 밸런싱, TLS 종료, 캐싱, 보안</td></tr>
+<tr><td>예</td><td>사내 프록시 서버</td><td>Nginx, API 게이트웨이</td></tr>
+</tbody></table></div>
+<h3 id="cdn">CDN (Content Delivery Network)</h3>
+<p>사용자와 <strong>지리적으로 가까운 엣지 서버</strong>에 콘텐츠 사본을 두어 지연을 줄이고 원본 서버 부하를 덜어 준다.</p>
+<ul>
+<li>동작: DNS 가 사용자와 가까운 엣지 IP 를 응답 → 엣지에 캐시가 있으면 바로 응답(Hit), 없으면 원본에서 가져와 저장(Miss).</li>
+<li>대상: 이미지·영상·JS·CSS 같은 <strong>정적 콘텐츠</strong>가 기본. 동적 콘텐츠도 경로 최적화·TLS 종료로 이득을 본다.</li>
+<li>부가 효과: 트래픽을 넓게 흡수하므로 <strong>DDoS 완화</strong>에 쓰인다.</li>
+<li>주의: 배포 후에도 옛 파일이 보이는 문제 → 파일 이름에 해시를 붙이거나(캐시 버스팅) 무효화(purge)한다.</li>
+</ul>
+<hr />
+<h2 id="2-18-socket">2-18. 소켓 · I/O 멀티플렉싱 <span class="badge badge-star">⭐</span></h2>
+<h3 id="net-t3">TCP 소켓 호출 순서</h3>
+<pre><code>서버                                   클라이언트
+socket()                               socket()
+bind()      ← IP·포트 지정
+listen()    ← 연결 대기 큐 생성
+accept()    ← 블록                      connect()  ── 3-way handshake ──▶
+   │  (연결별 새 소켓 반환)
+read()/write()  ◀══════════════════▶   write()/read()
+close()                                close()
+</code></pre>
+<ul>
+<li><strong>소켓</strong>은 <code>(프로토콜, 출발 IP, 출발 포트, 목적 IP, 목적 포트)</code> 5-튜플로 식별한다. 그래서 서버 포트 하나(443)로 수만 연결을 받을 수 있다.</li>
+<li><code>listen()</code> 의 <strong>backlog</strong>: 3-way 를 마치고 <code>accept()</code> 를 기다리는 연결 큐 크기. 가득 차면 새 연결이 거절·지연된다. SYN Flooding 은 반쯤 열린 연결 큐를 채우는 공격이다.</li>
+</ul>
+<h3 id="server-models">서버 동시성 모델</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>모델</th><th>방식</th><th>한계</th></tr></thead>
+<tbody>
+<tr><td>연결당 프로세스</td><td><code>accept()</code> 후 <code>fork()</code></td><td>프로세스 생성 비용, 메모리</td></tr>
+<tr><td>연결당 스레드</td><td>스레드 풀이 연결을 하나씩 맡음</td><td>연결 수 = 스레드 수 → 수만 연결에서 한계 (<strong>C10K 문제</strong>)</td></tr>
+<tr><td><strong>I/O 멀티플렉싱 + 이벤트 루프</strong></td><td>스레드 하나가 여러 소켓을 감시하다 준비된 것만 처리</td><td>CPU 연산이 긴 작업이 섞이면 전체가 멈춤</td></tr>
+</tbody></table></div>
+<h3 id="select-poll-epoll">select · poll · epoll</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>구분</th><th>select</th><th>poll</th><th>epoll (Linux)</th></tr></thead>
+<tbody>
+<tr><td>감시 대상 전달</td><td>호출마다 fd 집합 전체 복사</td><td>호출마다 배열 전체 복사</td><td><strong>커널에 한 번 등록</strong></td></tr>
+<tr><td>준비된 fd 찾기</td><td>전체를 순회 O(n)</td><td>전체를 순회 O(n)</td><td><strong>준비된 것만 반환</strong> O(준비된 수)</td></tr>
+<tr><td>fd 개수 제한</td><td>1024 (FD_SETSIZE)</td><td>없음</td><td>없음</td></tr>
+</tbody></table></div>
+<ul>
+<li><strong>레벨 트리거</strong>: 읽을 데이터가 남아 있는 동안 계속 알림. <strong>엣지 트리거</strong>: 상태가 바뀌는 순간 한 번만 알림 → 논블로킹 소켓으로 <code>EAGAIN</code> 이 나올 때까지 다 읽어야 한다.</li>
+<li>Nginx, Redis, Node.js, Netty 가 이 방식이다. Redis 가 단일 스레드로 빠른 이유도 "메모리 연산 + I/O 멀티플렉싱"이다.</li>
+<li>블로킹/논블로킹, 동기/비동기의 구분은 → <a href="#2-9-blockingnon-blocking-syncasync">2-9</a></li>
+</ul>
+<h3 id="tcp-practice">실무에서 만나는 TCP 설정</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>항목</th><th>내용</th></tr></thead>
+<tbody>
+<tr><td>TIME_WAIT</td><td>먼저 연결을 끊은 쪽이 2MSL 동안 머무는 상태. 지연 도착한 패킷이 새 연결에 섞이는 것을 막고 마지막 ACK 유실에 대비한다. 서버 재시작 시 <code>Address already in use</code> → <code>SO_REUSEADDR</code></td></tr>
+<tr><td>Nagle 알고리즘</td><td>작은 패킷을 모아서 보냄. 지연 ACK 와 만나면 수십 ms 지연 → 실시간 통신은 <code>TCP_NODELAY</code></td></tr>
+<tr><td>TCP Keepalive</td><td>유휴 연결에 탐사 패킷을 보내 죽은 상대를 감지. HTTP Keep-Alive(연결 재사용)와 <strong>다른 개념</strong></td></tr>
+<tr><td>커넥션 풀</td><td>연결을 미리 맺어 재사용. 핸드셰이크 비용 제거. DB·HTTP 클라이언트에 필수</td></tr>
+<tr><td>타임아웃</td><td>연결 타임아웃 / 읽기 타임아웃을 <strong>반드시</strong> 설정. 없으면 느린 상대 하나가 스레드를 모두 붙잡는다</td></tr>
+</tbody></table></div>
+<hr />
+<h2 id="2-19-datalink">2-19. 데이터 링크 계층 — 오류 검출 · 매체 접근 · VLAN <span class="badge badge-star">⭐</span> <span class="badge badge-calc">🧮</span></h2>
+<h3 id="error-detection">오류 검출</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>기법</th><th>원리</th><th>검출 능력</th><th>쓰임</th></tr></thead>
+<tbody>
+<tr><td>패리티 비트</td><td>1의 개수를 짝수/홀수로 맞춤</td><td>홀수 개 비트 오류만</td><td>메모리, 직렬 통신</td></tr>
+<tr><td>체크섬</td><td>데이터를 16비트 단위로 더해 1의 보수</td><td>약함</td><td>IP, TCP, UDP 헤더</td></tr>
+<tr><td><strong>CRC</strong></td><td>생성 다항식으로 나눈 <strong>나머지</strong>를 붙임</td><td>연집(burst) 오류에 강함</td><td>이더넷 프레임(FCS), 저장 장치</td></tr>
+<tr><td>해밍 코드</td><td>여러 패리티로 위치까지 계산</td><td>1비트 <strong>정정</strong>, 2비트 검출</td><td>ECC 메모리</td></tr>
+</tbody></table></div>
+<div class="calc-ex">
+<p><strong>예제.</strong> 데이터 <code>1101011011</code>, 생성 다항식 G(x) = x⁴ + x + 1 (<code>10011</code>) 일 때 전송 프레임은?</p>
+<details><summary>풀이</summary>
+<ol>
+<li>생성 다항식이 5비트이므로 데이터 뒤에 <strong>0 을 4개</strong> 붙인다 → <code>11010110110000</code></li>
+<li><code>10011</code> 로 <strong>모듈로-2 나눗셈</strong>(뺄셈 대신 XOR)을 한다.</li>
+<li>나머지 = <code>1110</code></li>
+<li>전송 프레임 = 데이터 + 나머지 = <strong><code>11010110111110</code></strong></li>
+<li>수신 측은 받은 프레임을 <code>10011</code> 로 나눠 <strong>나머지가 0 이면 오류 없음</strong>으로 판단한다.</li>
+</ol>
+<p>모듈로-2 나눗셈 규칙: 현재 맨 앞 비트가 1 이면 제수와 XOR, 0 이면 <code>00000</code> 과 XOR(그대로) 하고 다음 비트를 내린다.</p>
+</details>
+</div>
+<h3 id="arq">오류 제어 — ARQ</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>방식</th><th>동작</th><th>특징</th></tr></thead>
+<tbody>
+<tr><td>Stop-and-Wait</td><td>프레임 하나 보내고 ACK 를 기다림</td><td>단순, 효율 낮음</td></tr>
+<tr><td>Go-Back-N</td><td>오류 난 프레임<strong>부터 전부</strong> 재전송</td><td>수신 버퍼 1, 송신 윈도 ≤ 2ⁿ−1</td></tr>
+<tr><td>Selective Repeat</td><td>오류 난 프레임<strong>만</strong> 재전송</td><td>수신 버퍼 필요, 윈도 ≤ 2ⁿ⁻¹</td></tr>
+</tbody></table></div>
+<h3 id="mac-protocols">매체 접근 제어</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>구분</th><th>CSMA/CD</th><th>CSMA/CA</th></tr></thead>
+<tbody>
+<tr><td>쓰는 곳</td><td>유선 이더넷 (반이중·허브 환경)</td><td>무선 LAN (Wi-Fi)</td></tr>
+<tr><td>방식</td><td>보내면서 <strong>충돌을 감지</strong>, 충돌 시 중단 후 임의 시간 대기(지수 백오프)</td><td>보내기 전 임의 시간 대기로 <strong>충돌을 회피</strong>, ACK 로 확인</td></tr>
+<tr><td>이유</td><td>유선은 송신 중 충돌 감지가 가능</td><td>무선은 자기 신호가 너무 커 감지 불가, <strong>숨은 터미널</strong> 문제 → RTS/CTS</td></tr>
+</tbody></table></div>
+<blockquote>
+<p>현재 유선 이더넷은 스위치 + 전이중이라 충돌 영역이 포트 단위로 분리되어 CSMA/CD 가 사실상 동작하지 않는다.</p>
+</blockquote>
+<h3 id="vlan">충돌 도메인 · 브로드캐스트 도메인 · VLAN</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>장비</th><th>충돌 도메인</th><th>브로드캐스트 도메인</th></tr></thead>
+<tbody>
+<tr><td>허브</td><td>나누지 못함</td><td>나누지 못함</td></tr>
+<tr><td>스위치</td><td><strong>포트마다 분리</strong></td><td>나누지 못함 (VLAN 으로 분리 가능)</td></tr>
+<tr><td>라우터</td><td>분리</td><td><strong>분리</strong></td></tr>
+</tbody></table></div>
+<ul>
+<li><strong>VLAN</strong>: 물리적 연결과 무관하게 스위치 포트를 <strong>논리적 네트워크</strong>로 나눈다. 브로드캐스트 범위 축소, 부서 간 격리(보안), 유연한 재배치. 서로 다른 VLAN 사이 통신은 <strong>L3 장비</strong>를 거쳐야 한다.</li>
+<li><strong>트렁크 포트</strong>: 스위치 간 링크 하나로 여러 VLAN 프레임을 운반한다. 프레임에 <strong>802.1Q 태그</strong>(VLAN ID 12비트 → 최대 4094개)를 붙인다.</li>
+<li><strong>STP(Spanning Tree Protocol)</strong>: 이중화로 생긴 <strong>루프</strong>(브로드캐스트 스톰)를 막으려고 일부 포트를 논리적으로 차단해 트리를 만든다.</li>
+</ul>
+<hr />
+<h2 id="2-20-icmp-tools">2-20. ICMP · 진단 도구 · 포트 번호 <span class="badge badge-tri">△</span></h2>
+<h3 id="icmp">ICMP</h3>
+<p>IP 는 오류를 보고하지 않는다. → <strong>ICMP</strong> 가 오류와 상태를 알려 준다(네트워크 계층, IP 위에 실림).</p>
+<div class="table-wrap"><table>
+<thead><tr><th>메시지</th><th>의미</th><th>쓰는 도구</th></tr></thead>
+<tbody>
+<tr><td>Echo Request / Reply</td><td>도달 가능성 확인</td><td><code>ping</code></td></tr>
+<tr><td>Time Exceeded</td><td>TTL 이 0 이 됨</td><td><code>traceroute</code></td></tr>
+<tr><td>Destination Unreachable</td><td>호스트·포트에 도달 불가</td><td>경로 MTU 탐색 등</td></tr>
+</tbody></table></div>
+<ul>
+<li><strong>traceroute 원리</strong>: TTL 을 1, 2, 3… 으로 늘려 보내면 각 홉의 라우터가 TTL 만료로 <code>Time Exceeded</code> 를 돌려준다. 그 발신 주소를 모으면 경로가 된다.</li>
+</ul>
+<h3 id="net-debug">장애 진단 순서</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>단계</th><th>질문</th><th>명령</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>이름이 풀리는가?</td><td><code>nslookup</code>, <code>dig</code></td></tr>
+<tr><td>2</td><td>상대에 닿는가?</td><td><code>ping</code>, <code>traceroute</code></td></tr>
+<tr><td>3</td><td>포트가 열려 있는가?</td><td><code>nc -zv host port</code>, <code>telnet</code></td></tr>
+<tr><td>4</td><td>내 서버가 듣고 있는가?</td><td><code>ss -tlnp</code>, <code>netstat -an</code></td></tr>
+<tr><td>5</td><td>응용 계층 응답은?</td><td><code>curl -v</code></td></tr>
+<tr><td>6</td><td>실제로 무엇이 오가는가?</td><td><code>tcpdump</code>, Wireshark</td></tr>
+</tbody></table></div>
+<blockquote>
+<p>아래 계층부터 위로 올라가며 확인한다. "안 돼요"를 <strong>DNS 문제 / 경로 문제 / 방화벽 문제 / 애플리케이션 문제</strong>로 가르는 것이 핵심이다.</p>
+</blockquote>
+<h3 id="well-known-ports">잘 알려진 포트</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>포트</th><th>프로토콜</th><th>포트</th><th>프로토콜</th></tr></thead>
+<tbody>
+<tr><td>20, 21</td><td>FTP (데이터, 제어)</td><td>110</td><td>POP3</td></tr>
+<tr><td>22</td><td>SSH, SFTP</td><td>143</td><td>IMAP</td></tr>
+<tr><td>23</td><td>Telnet</td><td>443</td><td>HTTPS</td></tr>
+<tr><td>25</td><td>SMTP</td><td>3306</td><td>MySQL</td></tr>
+<tr><td>53</td><td>DNS (UDP/TCP)</td><td>5432</td><td>PostgreSQL</td></tr>
+<tr><td>67, 68</td><td>DHCP (서버, 클라이언트)</td><td>6379</td><td>Redis</td></tr>
+<tr><td>80</td><td>HTTP</td><td>3389</td><td>RDP</td></tr>
+</tbody></table></div>
+</div>

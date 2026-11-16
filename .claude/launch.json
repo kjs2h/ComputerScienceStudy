@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "cs-note",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "C:/ws/study/ComputerScience/mvnw.cmd", "-q", "-f", "C:/ws/study/ComputerScience/pom.xml", "spring-boot:run"],
+      "port": 8080
+    }
+  ]
+}

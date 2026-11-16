@@ -1,0 +1,1036 @@
+<div class="note-body" th:fragment="content" th:inline="none" xmlns:th="http://www.thymeleaf.org">
+<h1 id="part-5">Part 5. 알고리즘</h1>
+<pre><code>알고리즘 (Algorithm)
+├─ 1. 정렬 (Sorting)                🔥 계산문제 가능
+│   ├─ Quick Sort / Merge Sort
+│   └─ 평균 vs 최악 시간복잡도 (코드 해석형 자주 출제)
+├─ 2. 탐색                          ⭐
+│   ├─ Binary Search
+│   ├─ Hash Table (충돌 처리: 개방주소법 vs 체이닝)
+│   └─ B-Tree 삽입 · 분할             ✍️
+├─ 3. 그래프 알고리즘                🔥
+│   ├─ DFS / BFS
+│   ├─ MST: Prim vs Kruskal        (직접 그리는 문제)
+│   ├─ Kruskal 정당성 증명 (귀류법)  ✍️
+│   ├─ 최단경로: Dijkstra           (단계별 dist[] 계산)
+│   └─ Dijkstra의 한계 &amp; 대안 (음수 가중치 등)
+├─ 4. Dynamic Programming           🔥
+│   ├─ 재귀 vs DP (시간복잡도 비교)
+│   ├─ DP 적용 가능 조건
+│   └─ LIS / LCA
+├─ 5. 기타 기법                     △
+│   ├─ BitMask
+│   ├─ 순열 / 조합
+│   └─ GCD / LCM
+├─ 6. 복잡도 분석                    🔥
+│   └─ 시간복잡도 / 공간복잡도 (Big-O)
+├─ 7. 설계 패러다임 · 마스터 정리       🔥 🧮
+├─ 8. 문제 풀이 패턴                  🔥 ✍️
+├─ 9. 문자열 알고리즘 (KMP)            ⭐
+├─ 10. 최단 경로 알고리즘 선택          ⭐
+└─ 11. P · NP · NP-완전               △
+</code></pre>
+<hr />
+<h2 id="5-1-big-o">5-1. 복잡도 분석 (Big-O) <span class="badge badge-fire">🔥</span></h2>
+<h3 id="_18">등장 배경</h3>
+<p>알고리즘의 성능을 "빠르다/느리다"처럼 막연히 말할 수 없다. <strong>입력 크기 n이 커질 때 실행 시간(또는 메모리)이 얼마나 증가하는가</strong>를 하드웨어와 무관하게 수학적으로 표현할 방법이 필요하다.</p>
+<h3 id="big-o">Big-O 표기법</h3>
+<p><strong>최악의 경우(Worst case)</strong> 를 기준으로, n이 무한히 커질 때의 <strong>증가율(성장 속도)</strong> 만 남기고 상수·저차항을 제거한 표기.</p>
+<pre><code>시간복잡도 증가 속도 (느림 → 빠름)
+O(1) &lt; O(log n) &lt; O(n) &lt; O(n log n) &lt; O(n²) &lt; O(n³) &lt; O(2ⁿ) &lt; O(n!)
+</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>복잡도</th>
+<th>이름</th>
+<th>예시</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>O(1)</td>
+<td>상수</td>
+<td>배열 인덱스 접근, 해시 탐색(평균)</td>
+</tr>
+<tr>
+<td>O(log n)</td>
+<td>로그</td>
+<td><strong>이진 탐색</strong>, 균형 트리 탐색</td>
+</tr>
+<tr>
+<td>O(n)</td>
+<td>선형</td>
+<td>배열 순회, 선형 탐색</td>
+</tr>
+<tr>
+<td>O(n log n)</td>
+<td>선형로그</td>
+<td><strong>Merge Sort, Quick Sort(평균), Heap Sort</strong></td>
+</tr>
+<tr>
+<td>O(n²)</td>
+<td>이차</td>
+<td>버블/삽입/선택 정렬, 이중 반복문</td>
+</tr>
+<tr>
+<td>O(2ⁿ)</td>
+<td>지수</td>
+<td>피보나치 순수 재귀, 부분집합 완전탐색</td>
+</tr>
+<tr>
+<td>O(n!)</td>
+<td>팩토리얼</td>
+<td>순열 완전탐색(외판원 문제 브루트포스)</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>시간복잡도 vs 공간복잡도</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>시간복잡도</th>
+<th>공간복잡도</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>측정 대상</td>
+<td>실행 <strong>시간</strong>이 입력 크기에 따라 느는 정도</td>
+<td><strong>메모리 사용량</strong>이 입력 크기에 따라 느는 정도</td>
+</tr>
+<tr>
+<td>Trade-off</td>
+<td><strong>메모리를 더 써서 시간을 줄이는(캐싱, DP)</strong> 관계가 흔함</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Ω(빅오메가, 최선)</strong>, <strong>Θ(빅세타, 평균/타이트)</strong> 도 있으나 시험에서는 통상 <strong>Big-O(최악)</strong> 기준으로 서술한다.</p>
+<hr />
+<h2 id="5-2-sorting">5-2. 정렬 (Sorting) <span class="badge badge-fire">🔥</span><span class="badge badge-calc">🧮</span></h2>
+<h3 id="_19">주요 정렬 알고리즘 비교</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>알고리즘</th>
+<th>평균</th>
+<th>최악</th>
+<th>공간</th>
+<th>안정성</th>
+<th>방식</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>버블/선택/삽입 정렬</td>
+<td>O(n²)</td>
+<td>O(n²)</td>
+<td>O(1)</td>
+<td>버블·삽입 안정 / 선택 불안정</td>
+<td>비교 기반</td>
+</tr>
+<tr>
+<td><strong>Quick Sort</strong></td>
+<td><strong>O(n log n)</strong></td>
+<td><strong>O(n²)</strong></td>
+<td>O(log n)</td>
+<td><strong>불안정</strong></td>
+<td>분할 정복, <strong>제자리(in-place)</strong></td>
+</tr>
+<tr>
+<td><strong>Merge Sort</strong></td>
+<td><strong>O(n log n)</strong></td>
+<td><strong>O(n log n)</strong></td>
+<td><strong>O(n)</strong></td>
+<td><strong>안정</strong></td>
+<td>분할 정복, 병합 시 별도 배열 필요</td>
+</tr>
+<tr>
+<td>Heap Sort</td>
+<td>O(n log n)</td>
+<td>O(n log n)</td>
+<td>O(1)</td>
+<td>불안정</td>
+<td>힙 구조 이용</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p><strong>안정 정렬(Stable Sort)</strong>: 값이 같은 원소들의 <strong>상대적 순서가 정렬 후에도 유지</strong>되는 정렬. Merge Sort는 병합 시 <code>&lt;=</code> 비교로 안정성을 지킬 수 있지만, Quick Sort는 피벗 기준 교환 과정에서 순서가 뒤바뀔 수 있어 <strong>본질적으로 불안정</strong>하다.</p>
+</blockquote>
+<h3 id="algo-n1"><span class="badge badge-fire">🔥</span> Quick Sort vs Merge Sort, 평균은 같은데 최악이 다른 이유</h3>
+<p><strong>둘 다 "분할 정복(Divide and Conquer)"</strong> 이지만 분할하는 방식이 근본적으로 다르다.</p>
+<pre><code>Quick Sort: partition()으로 피벗을 기준으로 나눔 → 나누는 &quot;크기&quot;가 데이터에 따라 달라짐
+Merge Sort: 무조건 중간(mid)에서 절반으로 나눔     → 나누는 &quot;크기&quot;가 항상 균등
+</code></pre>
+<p><strong>Quick Sort 최악 시간복잡도: O(n²)</strong></p>
+<pre><code>partition()은 피벗(A[last])을 기준으로 나눈다.
+만약 배열이 이미 정렬되어 있고(오름차순), 항상 &quot;마지막 원소&quot;를 피벗으로 고르면:
+
+  피벗이 항상 최댓값(또는 최솟값)이 됨
+  → 분할이 [n-1개] : [0개] 로 극도로 불균형하게 쪼개짐
+  → 재귀 깊이가 n에 비례 (log n이 아니라 n)
+  → 각 깊이에서 O(n)의 비교 작업
+  → 총 시간 = O(n) × O(n) = O(n²)
+
+  (예: 5개 원소 정렬 시 재귀 호출 트리가
+   n, n-1, n-2, ..., 1 로 선형적으로 감소 → 등차수열 합 = O(n²))
+</code></pre>
+<p><strong>Merge Sort 최악 시간복잡도: O(n log n) — 변화 없음</strong></p>
+<pre><code>bSort()는 항상 mid = (first+last)/2 로 정확히 절반씩 나눈다.
+입력 데이터의 상태(정렬 여부)와 무관하게 항상 균등 분할된다.
+→ 재귀 깊이는 항상 log n (데이터가 어떻든 불변)
+→ 각 깊이에서 병합(_bSort)에 O(n)
+→ 총 시간 = O(n) × O(log n) = O(n log n)  ← 최선=평균=최악 모두 동일
+</code></pre>
+<p><strong>✅ 왜 평균과 최악이 차이 나는가 — 답안 핵심 문장</strong></p>
+<blockquote>
+<p><strong>Quick Sort는 분할 지점(피벗)이 입력 데이터의 값 분포에 의존</strong>하기 때문에, 운이 나쁘면(이미 정렬된 배열 등) 분할이 한쪽으로 극도로 치우쳐 재귀 트리의 높이가 O(log n)이 아닌 <strong>O(n)까지 늘어나 O(n²)가 된다.</strong>
+반면 <strong>Merge Sort는 분할 지점이 항상 데이터 값과 무관하게 배열의 중간(index 기준)으로 고정</strong>되므로, 입력이 어떤 상태이든 재귀 트리 높이가 <strong>항상 log n으로 일정</strong>하여 최악의 경우에도 O(n log n)을 유지한다.
+즉, <strong>"분할이 데이터에 의존하는가(Quick), 아니면 항상 균등한가(Merge)"</strong> 가 최악 시간복잡도 차이의 근본 원인이다.</p>
+</blockquote>
+<p><strong>⚠️ 함정</strong>: 최악의 경우를 피하려고 실제 구현에서는 <strong>피벗을 무작위로 고르거나(Randomized Quick Sort), 중간값을 고르는(Median-of-three)</strong> 방식을 쓴다. 이 경우 평균적으로 O(n²)가 나올 확률은 극히 낮아지지만 <strong>이론적 최악 시간복잡도 자체는 여전히 O(n²)</strong> 임을 구별해서 서술해야 한다.</p>
+<h3 id="quick-sort-vs-merge-sort">Quick Sort vs Merge Sort 추가 비교</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>Quick Sort</th>
+<th>Merge Sort</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>추가 메모리</td>
+<td><strong>거의 없음(in-place)</strong></td>
+<td><strong>O(n) 필요</strong>(병합용 배열)</td>
+</tr>
+<tr>
+<td>캐시 효율</td>
+<td>좋음(지역성 활용)</td>
+<td>상대적으로 낮음</td>
+</tr>
+<tr>
+<td>실무 사용</td>
+<td>일반적인 배열 정렬(빠름)</td>
+<td><strong>외부 정렬</strong>, 연결 리스트 정렬, <strong>안정성이 필요할 때</strong></td>
+</tr>
+<tr>
+<td>최악 회피</td>
+<td>피벗 선택 전략으로 완화 가능</td>
+<td>항상 보장됨</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="5-3">5-3. 탐색 &amp; 해시 <span class="badge badge-star">⭐</span></h2>
+<h3 id="binary-search">Binary Search (이진 탐색)</h3>
+<p><strong>전제 조건</strong>: 배열이 <strong>정렬</strong>되어 있어야 함.</p>
+<pre><code>시간복잡도 O(log n)
+매 비교마다 탐색 범위를 절반으로 줄임
+mid = (low + high) / 2
+target &lt; arr[mid] → high = mid - 1
+target &gt; arr[mid] → low = mid + 1
+</code></pre>
+<h3 id="algo-n2"><span class="badge badge-fire">🔥</span> 해시 함수와 충돌</h3>
+<p><strong>충돌(Collision)이 발생하는 이유</strong></p>
+<blockquote>
+<p>해시 함수는 <strong>무한한(또는 매우 큰) 키 공간을 유한한 크기의 해시 테이블 인덱스로 매핑</strong>한다(비둘기집 원리). 테이블 크기보다 키의 개수가 많거나, 서로 다른 두 키가 우연히 같은 해시값을 산출하면 <strong>동일한 인덱스를 두고 경합</strong>하는 충돌이 발생한다. 이는 해시 함수를 아무리 잘 설계해도 <strong>본질적으로 피할 수 없는</strong> 현상이다.</p>
+</blockquote>
+<p><strong>해결 방법 2가지</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>방법</th>
+<th>원리</th>
+<th>장점</th>
+<th>단점</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>체이닝 (Chaining)</strong></td>
+<td>각 버킷을 <strong>연결 리스트(또는 트리)</strong> 로 구성. 충돌 시 같은 인덱스에 계속 연결</td>
+<td>테이블이 가득 차도 삽입 가능, 구현 단순</td>
+<td>포인터 오버헤드, 캐시 지역성 낮음</td>
+</tr>
+<tr>
+<td><strong>개방 주소법 (Open Addressing)</strong></td>
+<td>충돌 시 <strong>정해진 규칙으로 다른 빈 슬롯을 탐사</strong>하여 그 자리에 저장</td>
+<td>추가 메모리(포인터) 불필요, 캐시 지역성 좋음</td>
+<td><strong>테이블이 가득 차면 삽입 불가</strong>, 삭제가 복잡, <strong>클러스터링</strong> 문제</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>개방 주소법의 탐사 방식</strong>
+- <strong>선형 탐사(Linear Probing)</strong>: <code>(h(k)+i) % m</code> — 구현 간단하지만 <strong>1차 클러스터링(Primary Clustering)</strong> 심함
+- <strong>제곱 탐사(Quadratic Probing)</strong>: <code>(h(k)+i²) % m</code> — 클러스터링 완화되나 완전 해소는 아님
+- <strong>이중 해싱(Double Hashing)</strong>: 두 번째 해시함수로 탐사 간격 결정 — 클러스터링 최소화</p>
+<h3 id="algo-n3"><span class="badge badge-calc">🧮</span> 선형 탐사 시뮬레이션 문제점</h3>
+<pre><code class="language-c">#define SIZE 13
+int Hash(int key){ return key % SIZE; }
+// 충돌 시 probe = (probe+1) % SIZE 로 다음 칸을 찾는 선형 탐사
+</code></pre>
+<p><strong>기존 상태</strong> (18, 37, 25 삽입 완료)</p>
+<pre><code>idx:  0  1  2  3  4  5    6  7  8  9  10  11   12
+값 :  -  -  -  -  -  18   -  -  -  -  -   37   25
+(18%13=5, 37%13=11, 25%13=12)
+</code></pre>
+<p><strong>추가로 22, 35, 50, 63 순서대로 삽입</strong></p>
+<pre><code>22 % 13 = 9   → 9번 비어있음 → idx 9 = 22
+35 % 13 = 9   → 9번 충돌(22) → 10번 비어있음 → idx 10 = 35
+50 % 13 = 11  → 11번 충돌(37) → 12번 충돌(25) → 0번 비어있음(순환) → idx 0 = 50
+63 % 13 = 11  → 11번 충돌(37) → 12(25) → 0(50) → 1번 비어있음 → idx 1 = 63
+</code></pre>
+<p><strong>✅ 최종 테이블</strong></p>
+<pre><code>idx:  0    1    2  3  4  5    6  7  8  9   10  11   12
+값 :  50   63   -  -  -  18   -  -  -  22  35  37   25
+</code></pre>
+<p><strong>이 방법(선형 탐사)의 문제점</strong></p>
+<blockquote>
+<p><strong>1차 클러스터링(Primary Clustering)</strong>: 한 번 충돌이 발생한 지점 주변으로 데이터가 <strong>뭉쳐서 쌓이는 현상</strong>. 위 예시에서 63이 원래 자리(11)에서 무려 4칸 떨어진 1번까지 밀려난 것처럼, <strong>군집이 커질수록 다음 충돌 확률이 더욱 높아지는 악순환</strong>이 발생하여 탐색 성능이 O(1)에서 점점 O(n)에 가깝게 저하된다.</p>
+</blockquote>
+<h3 id="b-tree-insert">B-Tree 삽입 · 분할 <span class="badge badge-fire">🔥</span> <span class="badge badge-pencil">✍️</span></h3>
+<p><strong>B-Tree</strong>: 디스크 접근을 줄이기 위해 <strong>한 노드에 여러 키</strong>를 담는 균형 다진 탐색 트리. 모든 리프가 같은 깊이, 노드 내 키는 정렬 상태.</p>
+<pre><code>차수 m인 B-Tree: 노드당 키 최대 m−1개, 자식 최대 m개 (루트 제외 최소 ⌈m/2⌉−1개)
+
+삽입 절차
+① 탐색해서 들어갈 리프 노드를 찾아 정렬 위치에 삽입
+② 키 수가 최대를 넘으면(Overflow) → 분할(Split)
+     중간 키를 부모로 승격, 나머지를 좌·우 두 노드로 나눔
+③ 부모도 넘치면 위로 재귀 분할 → 루트가 분할되면 높이 +1
+
+예) (설명용) 차수 3 (키 최대 2개)
+        [5 | 10]                       [5 | 10] 에 1 삽입
+       /   |    \                      [2 3] 리프에 1 → [1 2 3] 넘침
+    [2 3] [7]  [12]                    → 중간 2 승격, [1] [3] 분할
+                                       → 부모 [2 5 10] 넘침 → 중간 5 승격(새 루트)
+                                              [5]
+                                            /     \
+                                         [2]       [10]
+                                        /   \     /    \
+                                      [1]  [3]  [7]   [12]
+   (&quot;7 삽입&quot;은 같은 절차로 직접 그려볼 것)
+</code></pre>
+<blockquote>
+<p>풀이 습관: <strong>단계마다 그림</strong>을 그리고 "어느 키가 승격됐는지"를 적는다. 분할 결과가 맞는지 ① 리프 깊이 모두 같은지 ② 중위 순회가 정렬되는지로 검산.</p>
+</blockquote>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>B-Tree vs B+Tree <span class="badge badge-star">⭐</span></th>
+<th>B-Tree</th>
+<th>B+Tree</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>데이터 위치</td>
+<td>모든 노드</td>
+<td><strong>리프에만</strong> (내부 노드는 인덱스)</td>
+</tr>
+<tr>
+<td>리프 연결</td>
+<td>없음</td>
+<td><strong>연결 리스트로 연결</strong></td>
+</tr>
+<tr>
+<td>범위 검색</td>
+<td>트리를 다시 순회</td>
+<td>리프를 따라 순차 탐색 → <strong>유리</strong></td>
+</tr>
+<tr>
+<td>쓰임</td>
+<td>파일 시스템 등</td>
+<td><strong>DB 인덱스</strong>(MySQL InnoDB 등)</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="bfs-trace">BFS 방문 순서 추적 <span class="badge badge-pencil">✍️</span></h3>
+<ul>
+<li>"같은 조건이면 <strong>낮은 번호부터</strong>" 같은 타이브레이크 조건을 먼저 표시</li>
+<li>답안은 <strong>큐 상태 표</strong>(꺼낸 노드 / 큐에 넣은 노드 / 큐 내용)로 쓰면 부분점수가 확실하다</li>
+<li>DFS = <strong>스택(재귀)</strong>, BFS = <strong>큐</strong> — "구현에 적합한 자료구조"를 물으면 이유(LIFO로 깊이 우선 / FIFO로 가까운 노드 우선)까지 쓴다</li>
+</ul>
+<h3 id="n4-6">B-Tree vs Heap, 그리고 삽입 검증 규칙 <span class="badge badge-fire">🔥</span></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>B-Tree</th>
+<th>Heap</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>모양</td>
+<td><strong>다진 탐색 트리</strong>, 노드당 키 여러 개(정렬)</td>
+<td><strong>완전 이진 트리</strong>, 노드당 키 1개</td>
+</tr>
+<tr>
+<td>규칙</td>
+<td>키 사이사이로 자식이 갈라짐, <strong>모든 리프 깊이 같음</strong></td>
+<td>부모 ≥ 자식(또는 ≤)</td>
+</tr>
+<tr>
+<td>용도</td>
+<td>DB 인덱스, 파일 시스템(디스크 접근 최소화)</td>
+<td>우선순위 큐, 힙 정렬</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><span class="badge badge-fire">🔥</span> 검증: <strong>키가 k개인 노드는 자식이 반드시 k + 1개</strong>. 분할 후 원래 노드에 키가 남아 있으면 안 됨(올라간 키 좌우로 쪼개졌는지 확인).</li>
+<li>표준 삽입은 <strong>분할만</strong> 사용. 빈자리 있는 형제로 옮기는 재분배는 B*-트리 같은 변형 — 조건이 없으면 쓰지 않는다.</li>
+<li>해시 코드 함정: 테이블이 가득 차면 탐사 <code>while</code>이 <strong>무한 루프</strong>, <code>int</code> 배열에서 빈칸을 0으로 표시하면 <strong>키 0 저장 불가</strong>.</li>
+</ul>
+<hr />
+<h2 id="5-4">5-4. 그래프 알고리즘 <span class="badge badge-fire">🔥</span> <span class="badge badge-pencil">✍️</span></h2>
+<h3 id="dfs-vs-bfs">DFS vs BFS <span class="badge badge-star">⭐</span></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th><strong>DFS</strong> (깊이 우선)</th>
+<th><strong>BFS</strong> (너비 우선)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>자료구조</td>
+<td><strong>스택</strong>(또는 재귀)</td>
+<td><strong>큐</strong></td>
+</tr>
+<tr>
+<td>탐색 방식</td>
+<td>한 방향으로 끝까지 파고든 뒤 되돌아옴</td>
+<td>가까운 노드부터 계층적으로 탐색</td>
+</tr>
+<tr>
+<td>최단 경로</td>
+<td>보장 안 됨</td>
+<td><strong>가중치 없는 그래프에서 최단 경로 보장</strong></td>
+</tr>
+<tr>
+<td>메모리</td>
+<td>상대적으로 적음(경로 깊이만큼)</td>
+<td>많음(레벨의 노드 수만큼)</td>
+</tr>
+<tr>
+<td>용도</td>
+<td>백트래킹, 사이클 탐지, 위상 정렬, 미로 탐색(모든 경로)</td>
+<td>최단 경로(비가중치), 레벨 순회</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="algo-n4">MST — 최소 신장 트리 <span class="badge badge-fire">🔥</span><span class="badge badge-pencil">✍️</span></h3>
+<p><strong>신장 트리(Spanning Tree)</strong>: 그래프 G의 모든 정점을 포함하되 <strong>사이클이 없는</strong> 부분 그래프(간선 수 = 정점 수 - 1).
+<strong>최소 신장 트리(MST)</strong>: 신장 트리 중 <strong>간선 가중치의 합이 최소</strong>인 것. <strong>탐욕법(Greedy)</strong> 으로 구할 수 있다.</p>
+<h3 id="prim">Prim 알고리즘</h3>
+<blockquote>
+<p><strong>정의</strong>: <strong>하나의 정점에서 시작</strong>하여, 현재까지 만든 트리와 <strong>연결된 간선 중 가중치가 가장 작은 간선</strong>을 매번 하나씩 선택해 트리를 확장해 나가는 방식.</p>
+</blockquote>
+<pre><code>1. 시작 정점을 트리에 포함
+2. 트리에 포함된 정점과 아직 포함 안 된 정점을 잇는 간선들 중
+   가중치가 최소인 간선을 선택 (단, 사이클이 생기면 안 됨)
+3. 그 간선의 반대쪽 정점을 트리에 추가
+4. 모든 정점이 포함될 때까지 2~3 반복
+</code></pre>
+<ul>
+<li>우선순위 큐(최소 힙) 사용 시 시간복잡도: <strong>O(E log V)</strong></li>
+<li><strong>간선이 조밀(dense)한 그래프</strong>에 유리</li>
+</ul>
+<h3 id="kruskal">Kruskal 알고리즘</h3>
+<blockquote>
+<p><strong>정의</strong>: 그래프의 <strong>모든 간선을 가중치 오름차순으로 정렬</strong>한 뒤, <strong>사이클을 만들지 않는 선에서</strong> 가중치가 작은 간선부터 순서대로 채택하는 방식.</p>
+</blockquote>
+<pre><code>1. 모든 간선을 가중치 오름차순 정렬
+2. 가중치가 가장 작은 간선부터 순서대로 확인
+3. 그 간선을 넣었을 때 사이클이 생기지 않으면 채택 (Union-Find로 판별)
+4. 간선 수가 (정점 수 - 1)이 될 때까지 반복
+</code></pre>
+<ul>
+<li><strong>Union-Find(Disjoint Set)</strong> 자료구조로 사이클 여부 판별</li>
+<li>시간복잡도: <strong>O(E log E)</strong> (정렬이 지배적)</li>
+<li><strong>간선이 희소(sparse)한 그래프</strong>에 유리, 정점 단위가 아니라 <strong>간선 단위</strong>로 탐욕적 선택</li>
+</ul>
+<h3 id="prim-vs-kruskal"><span class="badge badge-fire">🔥</span> Prim vs Kruskal 비교</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>Prim</th>
+<th>Kruskal</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>선택 기준</td>
+<td><strong>트리에 인접한</strong> 간선 중 최소</td>
+<td><strong>전체 간선</strong> 중 순서대로(사이클만 아니면)</td>
+</tr>
+<tr>
+<td>성장 방식</td>
+<td><strong>하나의 트리</strong>가 점점 커짐</td>
+<td><strong>여러 조각(숲)</strong> 이 합쳐지며 하나가 됨</td>
+</tr>
+<tr>
+<td>자료구조</td>
+<td>우선순위 큐, 방문 배열</td>
+<td>정렬, <strong>Union-Find</strong></td>
+</tr>
+<tr>
+<td>유리한 그래프</td>
+<td>조밀 그래프(Dense)</td>
+<td>희소 그래프(Sparse)</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="dijkstra"><span class="badge badge-fire">🔥</span> Dijkstra 최단 경로 알고리즘 <span class="badge badge-calc">🧮</span><span class="badge badge-pencil">✍️</span></h3>
+<p><strong>정의</strong>: 하나의 시작 정점에서 <strong>다른 모든 정점까지의 최단 경로</strong>를 구하는 알고리즘. <strong>탐욕법</strong> 기반 — 매 단계에서 아직 확정되지 않은 정점 중 <strong>거리가 가장 짧은 정점을 확정</strong>하고, 그 정점을 거쳐 갈 수 있는 다른 정점들의 거리를 갱신(Relaxation)한다.</p>
+<pre><code>1. 시작 정점의 dist = 0, 나머지는 ∞로 초기화
+2. 미확정 정점 중 dist가 가장 작은 정점 u를 확정
+3. u와 인접한 모든 정점 v에 대해:
+     if dist[u] + weight(u,v) &lt; dist[v]:
+         dist[v] = dist[u] + weight(u,v)   ← Relaxation(완화)
+4. 모든 정점이 확정될 때까지 2~3 반복
+</code></pre>
+<p><strong>dist[] 표 계산 예시 구조</strong> (문제 그래프에 맞춰 직접 채우는 방식)</p>
+<pre><code>step   S    A    B    C    D    E    F
+1      -    ∞    ∞    ∞    ∞    ∞    ∞
+2  (S 확정, 인접 정점 갱신)
+      -    5    ∞   10    ∞    ∞    ∞
+3  (다음 최소값 A(5) 확정 → A의 인접 정점 갱신)
+      -    5    14   11    ∞    ∞    ∞
+   ... (이하 반복하며 매번 &quot;미확정 중 최솟값&quot; 확정)
+</code></pre>
+<blockquote>
+<p><strong>풀이 습관</strong>: 매 step마다 ① 어떤 정점을 확정했는지 ② 그 정점을 통해 어떤 dist가 갱신됐는지를 표에 명시하면 부분점수를 챙기기 유리하다. <strong>값이 갱신되지 않은 칸은 이전 값을 그대로 유지</strong>(문제에서 "업데이트되지 않는 과정은 생략" 지시가 있으면 빈칸 가능).</p>
+</blockquote>
+<h3 id="algo-n5"><span class="badge badge-fire">🔥</span> Dijkstra의 한계와 대안</h3>
+<p><strong>한계</strong>: Dijkstra는 <strong>음수 가중치 간선이 있으면 정상 동작하지 않는다.</strong></p>
+<pre><code>이유: Dijkstra는 &quot;한 번 확정(dist가 최종 확정)된 정점의 거리는
+      이후 절대 더 줄어들지 않는다&quot;는 탐욕적 가정 위에서 동작한다.
+      이는 모든 간선 가중치가 0 이상이어야 성립하는 가정이다.
+
+      만약 나중에 음수 가중치 간선을 거쳐 더 짧은 경로가 발견되면
+      이미 &quot;확정&quot;하고 넘어간 정점의 dist를 갱신할 방법이 없어
+      최종 결과가 실제 최단 거리보다 커지는 오류가 발생한다.
+</code></pre>
+<p><strong>대안: 벨만-포드(Bellman-Ford) 알고리즘</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>Dijkstra</th>
+<th>Bellman-Ford</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>음수 가중치</td>
+<td>❌ 불가</td>
+<td>✅ <strong>가능</strong></td>
+</tr>
+<tr>
+<td>음수 사이클 탐지</td>
+<td>불가</td>
+<td>✅ <strong>가능</strong>(탐지하여 "최단 경로 없음" 판단)</td>
+</tr>
+<tr>
+<td>동작 방식</td>
+<td>탐욕법, <strong>매번 최소 정점만 골라 1회</strong> 갱신</td>
+<td><strong>모든 간선을 (정점 수 - 1)번 반복</strong>하며 전수 완화(Relaxation)</td>
+</tr>
+<tr>
+<td>시간복잡도</td>
+<td>O(E log V) (우선순위 큐 사용 시)</td>
+<td><strong>O(V × E)</strong> (더 느림)</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>동작 방식의 차이 (서술 포인트)</strong></p>
+<blockquote>
+<p>Dijkstra는 매 단계마다 "지금 가장 짧다고 판단되는 정점 하나만" 골라 확정하고 전진하는 <strong>탐욕적·선택적</strong> 접근인 반면, Bellman-Ford는 <strong>모든 간선을 정점 수-1번만큼 전부 반복 검사</strong>하며 개선 가능한 거리를 계속 갱신하는 <strong>완전 탐색에 가까운 동적 계획법적</strong> 접근이다. 이 "모든 간선을 반복적으로 전부 확인한다"는 특성 덕분에, 나중에 발견된 음수 가중치 경로로도 이미 계산된 거리를 갱신할 수 있어 음수 가중치를 허용할 수 있다. 대신 매번 정답이 확실한 정점만 고르는 게 아니므로 <strong>속도는 Dijkstra보다 느리다.</strong></p>
+</blockquote>
+<p><strong>추가 대안</strong>: <strong>플로이드-워셜(Floyd-Warshall)</strong> — 모든 정점 쌍 간의 최단 경로를 한 번에 구함(O(V³)), 음수 가중치 허용(음수 사이클은 불가)</p>
+<h3 id="kruskal-proof">크루스칼 정당성 증명 (귀류법 · 교환 논증) <span class="badge badge-fire">🔥</span> <span class="badge badge-pencil">✍️</span></h3>
+<p><strong>핵심 아이디어 — 교환(Exchange)</strong>: 신장 트리에 간선 e를 추가하면 <strong>사이클이 딱 하나</strong> 생긴다. 그 사이클에서 <strong>e보다 무거운 간선 f를 빼면</strong> 다시 신장 트리가 되고 총 가중치는 줄어든다.</p>
+<pre><code>가정: Kruskal 결과 T ≠ 최소 신장 트리 T*
+  ↓
+T에는 있고 T*에는 없는 최초의 간선 e(u,v)
+  ↓
+T*도 신장 트리 → u에서 v로 가는 경로 p가 존재 (p에 e는 없음)
+  ↓
+[경우 1] p의 모든 간선이 e보다 가볍다면
+   → Kruskal은 가벼운 간선부터 보므로 e 이전에 이미 u, v가 연결됨   …①
+   → 그 상태에서 e를 고르면 사이클이 생김                              …②
+   → Kruskal은 사이클 간선을 고르지 않는다 = 알고리즘 정의에 모순
+  ↓
+[경우 2] 따라서 p에는 w_f &gt; w_e 인 간선 f가 존재
+   → T* ∪ {e} − {f} 도 신장 트리,  W = W* + w_e − w_f
+   → w_f &gt; w_e 이므로  W &lt; W*                                          …③
+   → T*가 최소라는 가정에 모순
+  ↓
+∴ T는 최소 신장 트리
+</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>빈칸</th>
+<th>답</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>①</td>
+<td>p의 모든 간선이 e보다 먼저 검토·선택되어, e를 검토하는 시점에 u와 v는 <strong>이미 연결(같은 집합)</strong>되어 있다</td>
+</tr>
+<tr>
+<td>②</td>
+<td>e를 추가하면 u–v 사이에 <strong>사이클이 생긴다</strong></td>
+</tr>
+<tr>
+<td>③</td>
+<td><strong>&lt;</strong> (w_f &gt; w_e 이므로 W = W<em> + w_e − w_f &lt; W</em>)</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p>⚠️ <strong>함정</strong>: ③을 <code>≤</code>로 쓰면 오답. w_f &gt; w_e가 <strong>엄격 부등호</strong>라서 W도 엄격하게 작다 → 그래야 "최소"에 모순이 성립한다.
+근거 원리: <strong>사이클 속성(Cycle Property)</strong> — 사이클의 최대 가중치 간선은 MST에 들어가지 않는다 / <strong>컷 속성(Cut Property)</strong> — 컷을 가로지르는 최소 간선은 MST에 들어간다.</p>
+</blockquote>
+<h3 id="mst-answer-format">MST 단계별 그리기 답안 작성법 <span class="badge badge-fire">🔥</span> <span class="badge badge-pencil">✍️</span></h3>
+<ul>
+<li>MST 정의 서술 시 <strong>"사이클 없음 + 모든 정점 포함 + 간선 수 V−1 + 가중치 합 최소"</strong> 필수</li>
+<li>Kruskal은 도구(Union-Find)가 아니라 <strong>절차</strong>로 정의: 오름차순 정렬 → 사이클 없으면 채택 → V−1개까지</li>
+<li>단계 수 = <strong>V − 1</strong>. 매 단계 "선택 간선 + 이전 간선 누적"을 실선으로</li>
+<li>사이클 때문에 <strong>버린 간선도 적어 두면</strong> 부분점수에 유리, 마지막에 <strong>총 가중치</strong></li>
+<li>같은 가중치 간선이 있으면 어느 순서로 봐도 사이클 여부만 판단 (MST가 여러 개일 수 있으나 총 가중치는 동일)</li>
+<li><span class="badge badge-tri">△</span> 모든 간선 가중치가 서로 다르면 MST는 유일</li>
+</ul>
+<h3 id="dijkstra-partial">Dijkstra 중간 상태 문제 <span class="badge badge-calc">🧮</span></h3>
+<p>"<strong>라우터 D까지 방문했을 때</strong> dist[]를 구하시오"처럼 <strong>알고리즘을 중간에 멈춘 상태</strong>를 묻는 변형이 나온다.</p>
+<ul>
+<li>방문(확정) 순서를 먼저 적고, <strong>D를 확정하고 D의 이웃까지 갱신한 직후</strong>의 배열을 답으로 쓴다</li>
+<li>아직 확정되지 않은 정점의 값은 "현재까지의 최솟값"이고 ∞일 수도 있다</li>
+<li>라우팅 문맥: OSPF(링크 상태)가 각 라우터에서 다익스트라로 최단 경로를 계산한다 (2-10)</li>
+</ul>
+<h3 id="n4-7">그래프 답안에서 자주 빠뜨리는 정의 <span class="badge badge-pencil">✍️</span></h3>
+<ul>
+<li><strong>트리 정의</strong>: 연결 + <strong>사이클 없음</strong> + 간선 N − 1개 (둘이 성립하면 나머지도 성립).</li>
+<li><strong>프림 정의 문장</strong>: "<strong>현재 트리에 속한 정점들과 트리 밖 정점을 잇는 간선 중</strong> 가중치 최소를 추가, 간선이 N − 1개가 될 때까지 반복." (시작 노드 하나의 간선만 보는 게 아님)</li>
+<li><strong>다익스트라 "X까지 방문했을 때"</strong> = X를 확정하고 <strong>X의 인접 간선 완화까지 끝낸 상태</strong>.</li>
+<li>단계별 답안: 간선은 <strong>정점 쌍(0-5)</strong>으로, 단계마다 후보 간선 나열, 마지막에 <strong>총합</strong> 검산.</li>
+</ul>
+<hr />
+<h2 id="5-5-dynamic-programming">5-5. Dynamic Programming <span class="badge badge-fire">🔥</span></h2>
+<h3 id="dp">DP를 적용할 수 있는 조건</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>조건</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>① 최적 부분 구조 (Optimal Substructure)</strong></td>
+<td>전체 문제의 최적해가 <strong>부분 문제들의 최적해로 구성</strong>될 수 있어야 함</td>
+</tr>
+<tr>
+<td><strong>② 중복되는 부분 문제 (Overlapping Subproblems)</strong></td>
+<td>동일한 부분 문제가 <strong>재귀 과정에서 여러 번 반복</strong> 계산되어야 함(이게 없으면 그냥 분할정복으로 충분, DP 필요 없음)</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p>이 두 조건이 <strong>모두</strong> 성립해야 DP로 성능 개선 효과를 볼 수 있다. ①만 있고 ②가 없으면(예: Merge Sort) 캐싱해도 이득이 없다.</p>
+</blockquote>
+<h3 id="vs-dp"><span class="badge badge-fire">🔥</span> 이항계수: 재귀 vs DP 시간복잡도</h3>
+<pre><code class="language-c">// A코드 (순수 재귀)
+int bino(int n, int r) {
+    if (r==0 || n==r) return 1;
+    return bino(n-1,r-1) + bino(n-1,r);
+}
+
+// B코드 (DP, 캐시 테이블 이용)
+int cache[MAX][MAX];
+int bino(int n, int r) {
+    for(int i=0; i&lt;=n; i++)
+        for(int j=0; j&lt;=r; j++) {
+            if (i==j || j==0) cache[i][j] = 1;
+            else cache[i][j] = cache[i-1][j-1] + cache[i-1][j];
+        }
+    return cache[n][r];
+}
+</code></pre>
+<p><strong>A코드(재귀) 시간복잡도: O(2ⁿ)</strong></p>
+<pre><code>호출마다 두 갈래로 재귀 분기(bino(n-1,r-1), bino(n-1,r))
+→ 호출 트리가 이진 트리 형태로 지수적으로 증가
+→ 동일한 (n,r) 조합을 이미 계산했음에도 또 계산(중복 부분 문제 낭비)
+→ O(2ⁿ) (엄밀히는 O(C(n,r))이지만 지수적 증가로 표현하는 것이 일반적)
+</code></pre>
+<p><strong>B코드(DP) 시간복잡도: O(n×r)</strong></p>
+<pre><code>이중 for문으로 각 (i,j) 조합을 정확히 &quot;한 번씩만&quot; 계산하여 배열에 저장(메모이제이션)
+→ i는 0~n, j는 0~r 범위를 순회하는 이중 루프
+→ O(n × r)   (n=r인 정사각 범위라면 O(n²))
+</code></pre>
+<p><strong>✅ 왜 성능 차이가 나는가</strong></p>
+<blockquote>
+<p>A코드는 <code>bino(n-1,r-1)</code>과 <code>bino(n-1,r)</code>을 계산하는 과정에서 <strong>동일한 하위 문제, 예를 들어 <code>bino(n-2,r-1)</code>을 양쪽 재귀 분기에서 각각 다시 계산</strong>한다. 이 중복 계산이 재귀 깊이만큼 기하급수적으로 누적되어 지수 시간이 된다.
+B코드는 <strong>한 번 계산한 결과를 <code>cache</code> 배열에 저장(메모이제이션)</strong> 해 두었다가, 이후 필요할 때 <strong>재계산 없이 배열에서 바로 꺼내 쓴다.</strong> 그 결과 각 부분 문제를 정확히 한 번씩만 계산하게 되어 시간복잡도가 O(n×r)로 크게 개선된다. → <strong>"중복되는 부분 문제를 저장해서 재활용한다"</strong> 는 DP의 정의 자체가 성능 개선의 원리다.</p>
+</blockquote>
+<h3 id="dp-2">DP 구현 방식 2가지 <span class="badge badge-star">⭐</span></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th><strong>메모이제이션 (Top-down)</strong></th>
+<th><strong>타뷸레이션 (Bottom-up)</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>방향</td>
+<td>재귀 + 캐싱 (큰 문제 → 작은 문제)</td>
+<td>반복문 (작은 문제 → 큰 문제, B코드 방식)</td>
+</tr>
+<tr>
+<td>계산량</td>
+<td>실제 필요한 부분 문제만 계산</td>
+<td>테이블 전체를 계산(불필요한 것도 계산될 수 있음)</td>
+</tr>
+<tr>
+<td>함수 호출 오버헤드</td>
+<td>있음(재귀)</td>
+<td>없음(반복문)</td>
+</tr>
+<tr>
+<td>스택 오버플로 위험</td>
+<td>있음(재귀 깊이 큼)</td>
+<td>없음</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="lis-lca">LIS / LCA (참고) <span class="badge badge-tri">△</span></h3>
+<ul>
+<li><strong>LIS (Longest Increasing Subsequence, 최장 증가 부분수열)</strong>: DP로 O(n²), 이분 탐색 결합 시 O(n log n)</li>
+<li><strong>LCA (Lowest Common Ancestor, 최소 공통 조상)</strong>: 트리에서 두 노드의 가장 가까운 공통 조상. 트리 DP, 오일러 경로+세그먼트 트리, <strong>희소 배열(Sparse Table)</strong> 등으로 O(log n) 질의</li>
+</ul>
+<h3 id="n4-8">복잡도 구하는 법 <span class="badge badge-calc">🧮</span></h3>
+<ul>
+<li><strong>재귀</strong> = 재귀 트리의 <strong>노드 수(호출 횟수) × 호출당 비용</strong>, <strong>반복문</strong> = 반복 횟수의 곱.</li>
+<li>이항계수 예: 단순 재귀 호출 ≈ 2·C(n, r) → C(n, n/2) ≈ 2ⁿ/√n → <strong>지수 시간</strong> / 표 채우기 (n+1)(r+1)칸 → <strong>O(n·r)</strong>.</li>
+<li>중복되는 부분 문제가 <strong>없으면</strong> DP가 아니라 그냥 분할 정복(병합 정렬처럼).</li>
+</ul>
+<hr />
+<h2 id="5-6">5-6. 기타 기법 <span class="badge badge-tri">△</span></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>기법</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>BitMask</strong></td>
+<td>집합의 포함 여부를 정수의 각 비트로 표현. <code>1&lt;&lt;i</code>로 원소 추가, <code>&amp;</code>로 포함 여부 확인. 외판원 문제(TSP) DP, 부분집합 순회에 활용</td>
+</tr>
+<tr>
+<td><strong>순열 (Permutation)</strong></td>
+<td>순서를 고려한 나열. n개 중 r개: <code>nPr = n!/(n-r)!</code></td>
+</tr>
+<tr>
+<td><strong>조합 (Combination)</strong></td>
+<td>순서 무관 선택. n개 중 r개: <code>nCr = n!/(r!(n-r)!)</code> — 위 이항계수 문제와 직결</td>
+</tr>
+<tr>
+<td><strong>GCD/LCM</strong></td>
+<td>최대공약수/최소공배수. <strong>유클리드 호제법</strong>: <code>gcd(a,b) = gcd(b, a%b)</code>, 시간복잡도 O(log(min(a,b))). <code>lcm(a,b) = a×b / gcd(a,b)</code></td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="5-7-paradigm">5-7. 알고리즘 설계 패러다임 <span class="badge badge-fire">🔥</span></h2>
+<div class="table-wrap"><table>
+<thead><tr><th>패러다임</th><th>생각</th><th>조건</th><th>대표 문제</th></tr></thead>
+<tbody>
+<tr><td>완전 탐색</td><td>가능한 경우를 전부 본다</td><td>경우의 수가 작다</td><td>순열·조합·부분집합 열거</td></tr>
+<tr><td>탐욕 (Greedy)</td><td>매 순간 <strong>지금 가장 좋은 것</strong>을 고른다</td><td>탐욕 선택 속성 + 최적 부분 구조</td><td>활동 선택, 허프만 코드, MST, 다익스트라</td></tr>
+<tr><td>분할 정복</td><td>문제를 <strong>겹치지 않는</strong> 부분으로 나눠 풀고 합친다</td><td>부분 문제가 독립</td><td>병합 정렬, 퀵 정렬, 이진 탐색, 거듭제곱</td></tr>
+<tr><td>동적 계획법</td><td><strong>겹치는</strong> 부분 문제의 답을 저장해 재사용</td><td>중복 부분 문제 + 최적 부분 구조</td><td>배낭, LCS, 최단 경로</td></tr>
+<tr><td>백트래킹</td><td>해를 만들어 가다 <strong>가망 없으면 되돌아간다</strong></td><td>가지치기 조건이 있다</td><td>N-Queen, 스도쿠, 부분집합의 합</td></tr>
+<tr><td>분기 한정</td><td>백트래킹 + <strong>한계값</strong>으로 최적해 후보만 탐색</td><td>최적화 문제</td><td>외판원 문제, 0/1 배낭</td></tr>
+</tbody></table></div>
+<h3 id="greedy">탐욕 알고리즘이 성립하는 조건</h3>
+<ul>
+<li><strong>탐욕 선택 속성</strong>: 지금의 지역 최적 선택이 전체 최적해에 포함된다.</li>
+<li><strong>최적 부분 구조</strong>: 선택 후 남은 문제도 같은 방식으로 최적으로 풀린다.</li>
+</ul>
+<div class="table-wrap"><table>
+<thead><tr><th>문제</th><th>탐욕 기준</th><th>성립 여부</th></tr></thead>
+<tbody>
+<tr><td>활동 선택 (회의실 배정)</td><td><strong>끝나는 시간이 빠른</strong> 것부터</td><td>✅</td></tr>
+<tr><td>거스름돈 (500, 100, 50, 10)</td><td>큰 동전부터</td><td>✅ (큰 동전이 작은 동전의 배수)</td></tr>
+<tr><td>거스름돈 (1, 3, 4) 로 6 만들기</td><td>큰 동전부터 → 4+1+1 = 3개</td><td>❌ 최적은 3+3 = 2개 → DP 필요</td></tr>
+<tr><td>분할 가능 배낭</td><td>무게당 가치가 큰 것부터</td><td>✅</td></tr>
+<tr><td>0/1 배낭</td><td>무게당 가치가 큰 것부터</td><td>❌ → DP 필요</td></tr>
+</tbody></table></div>
+<blockquote>
+<p>탐욕은 <strong>반례 하나</strong>로 무너진다. 서술형에서는 "왜 탐욕이 최적인가"를 <strong>교환 논증</strong>(최적해의 선택을 탐욕 선택으로 바꿔도 나빠지지 않음)으로 보인다.</p>
+</blockquote>
+<h3 id="dc-vs-dp">분할 정복 vs 동적 계획법</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>구분</th><th>분할 정복</th><th>동적 계획법</th></tr></thead>
+<tbody>
+<tr><td>부분 문제</td><td>서로 <strong>독립</strong></td><td>서로 <strong>겹침</strong></td></tr>
+<tr><td>저장</td><td>하지 않음</td><td>메모이제이션 / 테이블</td></tr>
+<tr><td>방향</td><td>하향식 (재귀)</td><td>하향식 또는 상향식</td></tr>
+<tr><td>예</td><td>병합 정렬</td><td>피보나치, LCS</td></tr>
+</tbody></table></div>
+<h3 id="backtracking">백트래킹 뼈대</h3>
+<pre><code class="language-python">def backtrack(state):
+    if is_solution(state):
+        record(state); return
+    for choice in candidates(state):
+        if not promising(state, choice):   # 가지치기
+            continue
+        apply(state, choice)
+        backtrack(state)
+        undo(state, choice)                # 되돌리기
+</code></pre>
+<ul>
+<li>N-Queen: 행마다 퀸을 하나 놓되 <strong>같은 열·대각선</strong>에 이미 있으면 그 가지를 버린다.</li>
+</ul>
+<h3 id="master-theorem">마스터 정리 <span class="badge badge-calc">🧮</span></h3>
+<p><strong>T(n) = a·T(n/b) + f(n)</strong> 꼴의 점화식. 기준값 <strong>n^(log_b a)</strong> 와 f(n) 을 비교한다.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>경우</th><th>조건</th><th>결과</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>f(n) 이 n^(log_b a) 보다 다항식적으로 <strong>작다</strong></td><td>T(n) = Θ(n^(log_b a))</td></tr>
+<tr><td>2</td><td>f(n) = Θ(n^(log_b a)) 로 <strong>같다</strong></td><td>T(n) = Θ(n^(log_b a) · log n)</td></tr>
+<tr><td>3</td><td>f(n) 이 다항식적으로 <strong>크다</strong> (정칙 조건 충족)</td><td>T(n) = Θ(f(n))</td></tr>
+</tbody></table></div>
+<div class="table-wrap"><table>
+<thead><tr><th>점화식</th><th>a, b</th><th>n^(log_b a)</th><th>결과</th><th>알고리즘</th></tr></thead>
+<tbody>
+<tr><td>T(n) = T(n/2) + 1</td><td>1, 2</td><td>1</td><td>Θ(log n)</td><td>이진 탐색</td></tr>
+<tr><td>T(n) = 2T(n/2) + n</td><td>2, 2</td><td>n</td><td>Θ(n log n)</td><td>병합 정렬</td></tr>
+<tr><td>T(n) = 2T(n/2) + 1</td><td>2, 2</td><td>n</td><td>Θ(n)</td><td>트리 순회</td></tr>
+<tr><td>T(n) = 4T(n/2) + n</td><td>4, 2</td><td>n²</td><td>Θ(n²)</td><td>단순 분할 곱셈</td></tr>
+<tr><td>T(n) = 3T(n/2) + n</td><td>3, 2</td><td>n^1.585</td><td>Θ(n^1.585)</td><td>카라추바 곱셈</td></tr>
+<tr><td>T(n) = 7T(n/2) + n²</td><td>7, 2</td><td>n^2.807</td><td>Θ(n^2.807)</td><td>슈트라센 행렬 곱</td></tr>
+<tr><td>T(n) = T(n−1) + n</td><td>—</td><td>—</td><td>Θ(n²) (마스터 정리 대상 아님, 전개)</td><td>퀵 정렬 최악</td></tr>
+</tbody></table></div>
+<hr />
+<h2 id="5-8-patterns">5-8. 문제 풀이 패턴 <span class="badge badge-fire">🔥</span> <span class="badge badge-pencil">✍️</span></h2>
+<h3 id="n-to-complexity">입력 크기로 허용 복잡도 역산하기</h3>
+<p>1초에 약 10⁸ 번의 단순 연산을 기준으로 한다.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>N 의 크기</th><th>허용되는 복잡도</th><th>후보 기법</th></tr></thead>
+<tbody>
+<tr><td>≤ 10</td><td>O(N!)</td><td>순열 완전 탐색</td></tr>
+<tr><td>≤ 20</td><td>O(2ᴺ · N)</td><td>비트마스크, 백트래킹</td></tr>
+<tr><td>≤ 500</td><td>O(N³)</td><td>플로이드-워셜, 3중 반복 DP</td></tr>
+<tr><td>≤ 5,000</td><td>O(N²)</td><td>2중 반복, 2차원 DP</td></tr>
+<tr><td>≤ 10⁶</td><td>O(N log N)</td><td>정렬, 힙, 이분 탐색, 세그먼트 트리</td></tr>
+<tr><td>≤ 10⁸</td><td>O(N)</td><td>투 포인터, 누적 합, 해시</td></tr>
+<tr><td>그 이상</td><td>O(log N), O(1)</td><td>이분 탐색, 수학</td></tr>
+</tbody></table></div>
+<h3 id="two-pointers">투 포인터 · 슬라이딩 윈도</h3>
+<pre><code class="language-python"># 정렬된 배열에서 합이 target 인 두 수 — O(N)
+def two_sum_sorted(a, target):
+    lo, hi = 0, len(a) - 1
+    while lo &lt; hi:
+        s = a[lo] + a[hi]
+        if s == target: return lo, hi
+        if s &lt; target: lo += 1
+        else: hi -= 1
+
+# 합이 target 이상인 가장 짧은 연속 구간 — O(N)
+def min_window(a, target):
+    best, total, left = float("inf"), 0, 0
+    for right, x in enumerate(a):
+        total += x
+        while total &gt;= target:
+            best = min(best, right - left + 1)
+            total -= a[left]; left += 1
+    return best
+</code></pre>
+<ul>
+<li>두 포인터가 각각 <strong>한 방향으로만</strong> 움직이므로 전체 O(N) 이다. "연속 구간", "정렬된 배열의 쌍" 이 보이면 떠올린다.</li>
+</ul>
+<h3 id="prefix-sum">누적 합</h3>
+<p><code>P[i] = a[0] + … + a[i−1]</code> 을 미리 구하면 구간 합 <code>a[l..r] = P[r+1] − P[l]</code> 을 O(1) 에 얻는다. 구간 질의가 여러 번이면 O(N·Q) → O(N + Q).</p>
+<h3 id="parametric-search">이분 탐색 · 매개 변수 탐색</h3>
+<pre><code class="language-python"># 조건을 만족하는 최솟값 찾기 (결정 문제로 바꿔 탐색)
+def lower_bound(lo, hi, ok):      # ok 는 F F F T T T 꼴로 단조
+    while lo &lt; hi:
+        mid = (lo + hi) // 2
+        if ok(mid): hi = mid
+        else: lo = mid + 1
+    return lo
+</code></pre>
+<ul>
+<li><strong>매개 변수 탐색</strong>: "최적값을 구하라"를 "값 x 로 <strong>가능한가?</strong>"로 바꾼다. 가능/불가능이 x 에 대해 <strong>단조</strong>이면 이분 탐색이 된다. (예: 랜선을 길이 x 로 잘라 K 개 이상 만들 수 있는가)</li>
+<li>실수 방지: 반복 조건(<code>lo &lt; hi</code> / <code>lo &lt;= hi</code>)과 갱신(<code>mid</code> / <code>mid ± 1</code>)을 한 가지 틀로 고정해 쓴다.</li>
+</ul>
+<h3 id="bfs-dfs-template">BFS · DFS 뼈대</h3>
+<pre><code class="language-python">from collections import deque
+
+def bfs(start, graph):                 # 가중치 없는 그래프의 최단 거리
+    dist = {start: 0}
+    q = deque([start])
+    while q:
+        u = q.popleft()
+        for v in graph[u]:
+            if v not in dist:          # 큐에 넣을 때 방문 표시
+                dist[v] = dist[u] + 1
+                q.append(v)
+    return dist
+
+def dfs(u, graph, visited):
+    visited.add(u)
+    for v in graph[u]:
+        if v not in visited:
+            dfs(v, graph, visited)
+</code></pre>
+<div class="table-wrap"><table>
+<thead><tr><th>상황</th><th>선택</th></tr></thead>
+<tbody>
+<tr><td>가중치 없는 최단 거리, 최소 횟수</td><td><strong>BFS</strong></td></tr>
+<tr><td>모든 경로·조합 탐색, 사이클 판별, 위상 정렬</td><td><strong>DFS</strong></td></tr>
+<tr><td>연결 요소 개수</td><td>둘 다 가능</td></tr>
+<tr><td>격자(미로)</td><td>방향 배열 <code>dx, dy</code> 로 인접 칸 순회</td></tr>
+</tbody></table></div>
+<ul>
+<li>BFS 에서 방문 표시를 <strong>꺼낼 때</strong> 하면 같은 정점이 큐에 여러 번 들어간다. <strong>넣을 때</strong> 한다.</li>
+</ul>
+<h3 id="topological-sort">위상 정렬</h3>
+<p><strong>방향 비순환 그래프(DAG)</strong> 에서 선행 관계를 지키는 순서. (선수 과목, 빌드 순서, 작업 일정)</p>
+<pre><code class="language-python">def topo_sort(n, graph, indeg):        # Kahn 알고리즘 — O(V + E)
+    q = deque(i for i in range(n) if indeg[i] == 0)
+    order = []
+    while q:
+        u = q.popleft(); order.append(u)
+        for v in graph[u]:
+            indeg[v] -= 1
+            if indeg[v] == 0: q.append(v)
+    return order if len(order) == n else None   # None 이면 사이클 존재
+</code></pre>
+<h3 id="union-find">유니온 파인드</h3>
+<pre><code class="language-python">parent = list(range(n))
+
+def find(x):                           # 경로 압축
+    if parent[x] != x:
+        parent[x] = find(parent[x])
+    return parent[x]
+
+def union(a, b):
+    a, b = find(a), find(b)
+    if a == b: return False            # 이미 같은 집합 → 사이클
+    parent[b] = a
+    return True
+</code></pre>
+<ul>
+<li>용도: 크루스칼의 사이클 검사, 연결 요소 관리, "같은 그룹인가" 질의. 경로 압축 + 랭크 합치기를 쓰면 연산당 거의 O(1) (역 아커만 함수).</li>
+</ul>
+<h3 id="monotonic-stack">단조 스택</h3>
+<p>"각 원소의 <strong>오른쪽에서 처음으로 더 큰 값</strong>" 같은 문제를 O(N) 에 푼다. 스택에 아직 답을 못 찾은 인덱스를 값이 감소하는 순서로 유지하다가, 더 큰 값이 오면 꺼내며 답을 채운다.</p>
+<hr />
+<h2 id="5-9-string">5-9. 문자열 알고리즘 <span class="badge badge-star">⭐</span></h2>
+<div class="table-wrap"><table>
+<thead><tr><th>알고리즘</th><th>시간</th><th>핵심 생각</th></tr></thead>
+<tbody>
+<tr><td>단순 비교</td><td>O(N·M)</td><td>모든 위치에서 한 글자씩 비교</td></tr>
+<tr><td><strong>KMP</strong></td><td>O(N + M)</td><td>불일치 시 <strong>이미 일치한 접두사 정보</strong>로 건너뜀</td></tr>
+<tr><td>라빈-카프</td><td>평균 O(N + M)</td><td>구간의 <strong>해시값</strong>을 굴려(rolling) 비교</td></tr>
+<tr><td>보이어-무어</td><td>평균 O(N/M)</td><td>패턴을 <strong>뒤에서부터</strong> 비교, 크게 건너뜀</td></tr>
+<tr><td>트라이</td><td>O(M) 검색</td><td>접두사를 공유하는 트리 → <a href="#6-8-advanced">자료구조</a></td></tr>
+</tbody></table></div>
+<h3 id="kmp">KMP 의 실패 함수</h3>
+<p><code>fail[i]</code> = 패턴의 <code>0..i</code> 구간에서 <strong>접두사이면서 접미사인 가장 긴 길이</strong> (자기 자신 제외).</p>
+<div class="calc-ex">
+<p><strong>예제.</strong> 패턴 <code>ABABCABAB</code> 의 실패 함수는?</p>
+<details><summary>풀이</summary>
+<div class="table-wrap"><table>
+<thead><tr><th>i</th><th>0</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th></tr></thead>
+<tbody>
+<tr><td>문자</td><td>A</td><td>B</td><td>A</td><td>B</td><td>C</td><td>A</td><td>B</td><td>A</td><td>B</td></tr>
+<tr><td>fail</td><td>0</td><td>0</td><td>1</td><td>2</td><td>0</td><td>1</td><td>2</td><td>3</td><td>4</td></tr>
+</tbody></table></div>
+<ul>
+<li>i=3: <code>ABAB</code> 의 접두사 <code>AB</code> = 접미사 <code>AB</code> → 2</li>
+<li>i=4: <code>ABABC</code> 는 일치하는 것이 없음 → 0</li>
+<li>i=8: <code>ABABCABAB</code> 의 접두사 <code>ABAB</code> = 접미사 <code>ABAB</code> → 4</li>
+</ul>
+<p>본문과 비교하다 패턴의 j 번째에서 불일치하면, 본문 위치는 그대로 두고 <strong>j = fail[j−1]</strong> 로 옮겨 이어서 비교한다. 본문 포인터가 뒤로 가지 않으므로 O(N + M) 이다.</p>
+</details>
+</div>
+<h3 id="string-tricks">문자열에서 자주 쓰는 기법</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>문제</th><th>기법</th></tr></thead>
+<tbody>
+<tr><td>애너그램 판별</td><td>문자 빈도 배열(또는 정렬) 비교</td></tr>
+<tr><td>회문 판별</td><td>양 끝에서 투 포인터</td></tr>
+<tr><td>가장 긴 회문 부분 문자열</td><td>중심 확장 O(N²), Manacher O(N)</td></tr>
+<tr><td>최장 공통 부분 수열 (LCS)</td><td>2차원 DP O(N·M)</td></tr>
+<tr><td>편집 거리</td><td>2차원 DP — 삽입·삭제·교체</td></tr>
+<tr><td>접두사 검색, 자동 완성</td><td>트라이</td></tr>
+</tbody></table></div>
+<hr />
+<h2 id="5-10-shortest-path">5-10. 최단 경로 알고리즘 선택 <span class="badge badge-star">⭐</span></h2>
+<div class="table-wrap"><table>
+<thead><tr><th>알고리즘</th><th>대상</th><th>음수 간선</th><th>시간</th><th>방식</th></tr></thead>
+<tbody>
+<tr><td>BFS</td><td>한 정점 → 모든 정점, <strong>가중치 없음</strong></td><td>—</td><td>O(V + E)</td><td>큐</td></tr>
+<tr><td>다익스트라</td><td>한 정점 → 모든 정점</td><td>❌</td><td>O(E log V)</td><td>탐욕 + 우선순위 큐</td></tr>
+<tr><td>벨만-포드</td><td>한 정점 → 모든 정점</td><td>✅ (음수 사이클 <strong>검출</strong>)</td><td>O(V·E)</td><td>모든 간선을 V−1 번 완화</td></tr>
+<tr><td>플로이드-워셜</td><td><strong>모든 쌍</strong></td><td>✅ (음수 사이클 없을 때)</td><td>O(V³)</td><td>DP</td></tr>
+<tr><td>A*</td><td>한 정점 → 한 정점</td><td>❌</td><td>휴리스틱에 의존</td><td>다익스트라 + 목표까지의 추정 거리</td></tr>
+</tbody></table></div>
+<ul>
+<li>다익스트라와 벨만-포드의 비교는 → <a href="#sum-bf-dijkstra">벨만-포드 vs 다익스트라</a></li>
+</ul>
+<h3 id="floyd-warshall">플로이드-워셜</h3>
+<p>"정점 k 를 <strong>경유지로 허용</strong>했을 때 i → j 가 더 짧아지는가"를 k 를 늘려 가며 갱신한다.</p>
+<pre><code class="language-python">for k in range(n):            # 경유지 — 반드시 가장 바깥 반복
+    for i in range(n):
+        for j in range(n):
+            if dist[i][k] + dist[k][j] &lt; dist[i][j]:
+                dist[i][j] = dist[i][k] + dist[k][j]
+</code></pre>
+<ul>
+<li>점화식: <code>D_k[i][j] = min(D_{k−1}[i][j], D_{k−1}[i][k] + D_{k−1}[k][j])</code></li>
+<li>반복 순서가 <strong>k → i → j</strong> 여야 한다. k 가 안쪽에 있으면 틀린 결과가 나온다.</li>
+<li>정점 수가 수백 이하이고 모든 쌍의 거리가 필요할 때 쓴다.</li>
+</ul>
+<hr />
+<h2 id="5-11-np">5-11. P · NP · NP-완전 <span class="badge badge-tri">△</span></h2>
+<div class="table-wrap"><table>
+<thead><tr><th>분류</th><th>정의</th><th>예</th></tr></thead>
+<tbody>
+<tr><td>P</td><td>다항 시간에 <strong>풀 수 있는</strong> 결정 문제</td><td>정렬, 최단 경로, MST</td></tr>
+<tr><td>NP</td><td>답이 주어지면 다항 시간에 <strong>검증할 수 있는</strong> 결정 문제</td><td>P 의 모든 문제, SAT, 해밀턴 경로</td></tr>
+<tr><td>NP-난해 (NP-hard)</td><td>모든 NP 문제를 다항 시간에 이 문제로 <strong>환원</strong>할 수 있음 (NP 에 속할 필요 없음)</td><td>외판원 최적화, 정지 문제</td></tr>
+<tr><td>NP-완전 (NP-complete)</td><td><strong>NP 이면서 NP-난해</strong></td><td>SAT, 3-SAT, 정점 덮개, 클리크, 부분집합의 합, 해밀턴 사이클</td></tr>
+</tbody></table></div>
+<ul>
+<li>P ⊆ NP 는 분명하다. <strong>P = NP 인지는 미해결</strong>이다.</li>
+<li>NP-완전 문제 하나라도 다항 시간에 풀리면 모든 NP 문제가 다항 시간에 풀린다.</li>
+<li>NP 는 "다항 시간이 아님(Non-Polynomial)"이 아니라 <strong>비결정적 다항 시간(Nondeterministic Polynomial)</strong> 의 약자다.</li>
+</ul>
+<p><strong>실무에서 NP-난해 문제를 만나면</strong></p>
+<div class="table-wrap"><table>
+<thead><tr><th>접근</th><th>내용</th></tr></thead>
+<tbody>
+<tr><td>입력 제한</td><td>N 이 작으면 비트마스크 DP·백트래킹으로 정확한 해</td></tr>
+<tr><td>근사 알고리즘</td><td>최적해의 일정 배수 이내를 보장</td></tr>
+<tr><td>휴리스틱 · 메타 휴리스틱</td><td>탐욕, 지역 탐색, 담금질 기법, 유전 알고리즘 — 보장은 없지만 실용적인 해</td></tr>
+<tr><td>문제 완화</td><td>제약을 풀어 다항 시간 문제로 바꿈</td></tr>
+</tbody></table></div>
+</div>

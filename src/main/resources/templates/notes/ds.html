@@ -1,0 +1,446 @@
+<div class="note-body" th:fragment="content" th:inline="none" xmlns:th="http://www.thymeleaf.org">
+<h1 id="part-6">Part 6. 자료구조</h1>
+<pre><code>자료구조 (Data Structure)
+├─ 1. 배열 · 연결 리스트            🔥
+├─ 2. 스택 · 큐 · 덱               🔥 🧮
+├─ 3. 해시 테이블                  🔥
+├─ 4. 트리 · 이진 탐색 트리         🔥 ✍️
+├─ 5. 균형 트리 (AVL · Red-Black · B/B+) ⭐
+├─ 6. 힙 · 우선순위 큐             🔥 ✍️
+├─ 7. 그래프 표현                  ⭐
+├─ 8. 트라이 · 블룸 필터 · LRU 캐시  ⭐
+└─ 9. 자료구조 선택 가이드          🔥
+</code></pre>
+<blockquote>
+<p>자료구조 문제의 답은 대부분 <strong>"어떤 연산이 자주 일어나는가"</strong> 에서 나온다. 조회가 많은가, 삽입·삭제가 많은가, 순서가 필요한가, 범위 검색이 필요한가를 먼저 묻는다.</p>
+</blockquote>
+<hr />
+<h2 id="6-1-array-list">6-1. 배열 · 연결 리스트 <span class="badge badge-fire">🔥</span></h2>
+<div class="table-wrap"><table>
+<thead><tr><th>구분</th><th>배열 (Array)</th><th>연결 리스트 (Linked List)</th></tr></thead>
+<tbody>
+<tr><td>메모리</td><td><strong>연속된</strong> 공간</td><td>흩어진 노드를 포인터로 연결</td></tr>
+<tr><td>인덱스 접근</td><td><strong>O(1)</strong></td><td>O(n)</td></tr>
+<tr><td>맨 앞 삽입·삭제</td><td>O(n) (뒤를 모두 이동)</td><td><strong>O(1)</strong></td></tr>
+<tr><td>중간 삽입·삭제</td><td>O(n)</td><td>위치를 알면 O(1), 찾는 데 O(n)</td></tr>
+<tr><td>캐시 지역성</td><td><strong>좋음</strong></td><td>나쁨 (포인터를 따라 흩어진 메모리 접근)</td></tr>
+<tr><td>추가 메모리</td><td>없음</td><td>노드마다 포인터</td></tr>
+<tr><td>크기</td><td>고정 (동적 배열은 재할당)</td><td>유동적</td></tr>
+</tbody></table></div>
+<ul>
+<li>이론상 삽입·삭제는 연결 리스트가 유리하지만, <strong>실제로는 캐시 지역성 때문에 배열이 더 빠른 경우가 많다.</strong> 대부분의 언어에서 기본 리스트가 동적 배열인 이유다.</li>
+</ul>
+<h3 id="dynamic-array">동적 배열과 분할 상환 분석</h3>
+<p>가득 차면 <strong>2배 크기</strong>의 새 배열을 잡고 전부 복사한다.</p>
+<ul>
+<li>복사는 O(n) 이지만 n 번 삽입하는 동안 복사 횟수의 합은 1 + 2 + 4 + … + n &lt; 2n 이다.</li>
+<li>따라서 삽입 한 번의 <strong>분할 상환(amortized) 비용은 O(1)</strong>.</li>
+<li>크기를 2배가 아니라 <strong>일정량씩</strong> 늘리면 n 번 삽입에 O(n²) 이 든다.</li>
+<li>재할당 순간 한 번의 지연이 문제인 실시간 시스템에서는 용량을 미리 예약한다.</li>
+</ul>
+<h3 id="linked-list-problems">연결 리스트 종류와 단골 문제</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>종류</th><th>특징</th></tr></thead>
+<tbody>
+<tr><td>단일 연결</td><td>다음 노드만 가리킴. 이전 노드로 못 감</td></tr>
+<tr><td>이중 연결</td><td>앞뒤를 모두 가리킴. 노드가 주어지면 O(1) 삭제</td></tr>
+<tr><td>원형 연결</td><td>마지막이 처음을 가리킴. 라운드 로빈</td></tr>
+</tbody></table></div>
+<div class="table-wrap"><table>
+<thead><tr><th>문제</th><th>풀이</th></tr></thead>
+<tbody>
+<tr><td>뒤집기</td><td><code>prev</code>, <code>cur</code>, <code>next</code> 세 포인터로 방향을 하나씩 바꿈</td></tr>
+<tr><td>가운데 노드</td><td>느린 포인터 1칸, 빠른 포인터 2칸</td></tr>
+<tr><td>사이클 검출</td><td><strong>플로이드의 토끼와 거북이</strong> — 두 포인터가 만나면 사이클</td></tr>
+<tr><td>뒤에서 k 번째</td><td>한 포인터를 k 칸 먼저 보낸 뒤 함께 이동</td></tr>
+<tr><td>정렬된 두 리스트 병합</td><td>더미 헤드를 두고 작은 쪽을 이어 붙임</td></tr>
+</tbody></table></div>
+<pre><code class="language-java">ListNode reverse(ListNode head) {
+    ListNode prev = null, cur = head;
+    while (cur != null) {
+        ListNode next = cur.next;
+        cur.next = prev;
+        prev = cur;
+        cur = next;
+    }
+    return prev;
+}
+</code></pre>
+<hr />
+<h2 id="6-2-stack-queue">6-2. 스택 · 큐 · 덱 <span class="badge badge-fire">🔥</span> <span class="badge badge-calc">🧮</span></h2>
+<div class="table-wrap"><table>
+<thead><tr><th>구분</th><th>스택</th><th>큐</th><th>덱 (Deque)</th></tr></thead>
+<tbody>
+<tr><td>원칙</td><td><strong>LIFO</strong> (후입선출)</td><td><strong>FIFO</strong> (선입선출)</td><td>양쪽 끝에서 삽입·삭제</td></tr>
+<tr><td>연산</td><td>push, pop, peek</td><td>enqueue, dequeue</td><td>앞뒤 push/pop</td></tr>
+<tr><td>쓰임</td><td>함수 호출 스택, 괄호 검사, 되돌리기, DFS, 후위 표기 계산</td><td>작업 대기열, BFS, 버퍼, 메시지 큐</td><td>슬라이딩 윈도 최댓값, 작업 훔치기</td></tr>
+</tbody></table></div>
+<h3 id="circular-queue">원형 큐</h3>
+<p>배열로 큐를 만들면 앞에서 꺼낸 자리가 낭비된다. → 인덱스를 <strong>나머지 연산</strong>으로 순환시킨다.</p>
+<ul>
+<li>삽입: <code>rear = (rear + 1) % N</code> / 삭제: <code>front = (front + 1) % N</code></li>
+<li>공백: <code>front == rear</code> / 포화: <code>(rear + 1) % N == front</code></li>
+<li>공백과 포화를 구분하려고 <strong>한 칸을 비워 둔다</strong> → 크기 N 인 배열에 최대 N−1 개 저장.</li>
+</ul>
+<h3 id="postfix">후위 표기법</h3>
+<div class="calc-ex">
+<p><strong>예제.</strong> 중위식 <code>A + B * (C − D) / E</code> 를 후위식으로 바꾸고, 후위식 <code>5 3 2 * + 4 −</code> 를 계산하라.</p>
+<details><summary>풀이</summary>
+<p><strong>중위 → 후위 (연산자 스택 사용)</strong></p>
+<ol>
+<li>피연산자는 바로 출력한다.</li>
+<li>연산자는 스택 꼭대기의 연산자가 자신보다 <strong>우선순위가 높거나 같으면</strong> 꺼내 출력한 뒤 자신을 넣는다.</li>
+<li><code>(</code> 는 무조건 넣고, <code>)</code> 를 만나면 <code>(</code> 가 나올 때까지 꺼내 출력한다.</li>
+</ol>
+<p>결과: <strong><code>A B C D − * E / +</code></strong></p>
+<p><strong>후위식 계산 (피연산자 스택 사용)</strong></p>
+<div class="table-wrap"><table>
+<thead><tr><th>읽은 것</th><th>동작</th><th>스택</th></tr></thead>
+<tbody>
+<tr><td>5, 3, 2</td><td>넣는다</td><td>5 3 2</td></tr>
+<tr><td>*</td><td>3 × 2 = 6</td><td>5 6</td></tr>
+<tr><td>+</td><td>5 + 6 = 11</td><td>11</td></tr>
+<tr><td>4</td><td>넣는다</td><td>11 4</td></tr>
+<tr><td>−</td><td>11 − 4 = 7</td><td><strong>7</strong></td></tr>
+</tbody></table></div>
+<p>연산자를 만나면 <strong>먼저 꺼낸 값이 오른쪽 피연산자</strong>다 (11 − 4 이지 4 − 11 이 아니다).</p>
+</details>
+</div>
+<h3 id="stack-queue-impl">서로를 구현하기</h3>
+<ul>
+<li><strong>스택 2개로 큐</strong>: 넣을 때는 <code>in</code> 스택에, 꺼낼 때는 <code>out</code> 스택이 비었으면 <code>in</code> 을 전부 옮긴 뒤 <code>out</code> 에서 꺼낸다. 원소마다 최대 두 번 이동하므로 분할 상환 O(1).</li>
+<li><strong>최솟값을 O(1) 에 주는 스택</strong>: 값과 함께 "그 시점까지의 최솟값"을 같이 쌓는다.</li>
+</ul>
+<hr />
+<h2 id="6-3-hash">6-3. 해시 테이블 <span class="badge badge-fire">🔥</span></h2>
+<p>키를 <strong>해시 함수</strong>로 배열 인덱스로 바꿔 평균 <strong>O(1)</strong> 에 삽입·조회·삭제한다.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>좋은 해시 함수의 조건</th><th>이유</th></tr></thead>
+<tbody>
+<tr><td>결정적</td><td>같은 키는 항상 같은 값</td></tr>
+<tr><td>균등 분포</td><td>충돌 최소화</td></tr>
+<tr><td>빠른 계산</td><td>O(1) 의 전제</td></tr>
+</tbody></table></div>
+<h3 id="hash-collision">충돌 해결</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>구분</th><th>체이닝 (Separate Chaining)</th><th>개방 주소법 (Open Addressing)</th></tr></thead>
+<tbody>
+<tr><td>방식</td><td>버킷마다 <strong>연결 리스트</strong>(또는 트리)</td><td>충돌 시 <strong>다른 빈 칸</strong>을 찾아감</td></tr>
+<tr><td>부하율</td><td>1 을 넘어도 동작</td><td>1 을 넘을 수 없음, 높아지면 급격히 느려짐</td></tr>
+<tr><td>메모리</td><td>포인터 오버헤드</td><td>추가 공간 없음, 캐시 친화적</td></tr>
+<tr><td>삭제</td><td>간단</td><td><strong>삭제 표시(tombstone)</strong> 필요</td></tr>
+</tbody></table></div>
+<div class="table-wrap"><table>
+<thead><tr><th>탐사 방식</th><th>다음 위치</th><th>문제</th></tr></thead>
+<tbody>
+<tr><td>선형 탐사</td><td>h(k) + i</td><td><strong>1차 군집</strong> (덩어리가 점점 커짐)</td></tr>
+<tr><td>이차 탐사</td><td>h(k) + i²</td><td>2차 군집</td></tr>
+<tr><td>이중 해싱</td><td>h₁(k) + i · h₂(k)</td><td>군집 최소, 계산 비용</td></tr>
+</tbody></table></div>
+<ul>
+<li>탐사 공식을 이용한 계산 문제는 → <a href="#a-9">해시 탐사 공식</a></li>
+</ul>
+<h3 id="load-factor">부하율과 재해싱</h3>
+<p><strong>부하율 α = 저장된 원소 수 / 버킷 수</strong>. α 가 임계값을 넘으면 버킷을 2배로 늘리고 <strong>모든 원소를 다시 배치</strong>(rehash)한다.</p>
+<ul>
+<li>Java <code>HashMap</code>: 기본 용량 16, 부하율 0.75. 한 버킷의 리스트가 8개를 넘으면 <strong>레드-블랙 트리</strong>로 바꿔 최악 O(n) 을 O(log n) 으로 줄인다.</li>
+<li>최악의 경우(모든 키가 한 버킷) O(n). 해시 함수를 아는 공격자가 충돌 키를 대량으로 보내는 <strong>해시 충돌 DoS</strong> 가 가능하다 → 실행마다 다른 시드를 쓰는 해시로 방어.</li>
+</ul>
+<h3 id="hash-vs-tree">해시 테이블 vs 균형 트리</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>구분</th><th>해시 테이블</th><th>균형 이진 탐색 트리</th></tr></thead>
+<tbody>
+<tr><td>조회·삽입·삭제</td><td>평균 O(1), 최악 O(n)</td><td><strong>항상 O(log n)</strong></td></tr>
+<tr><td>순서</td><td>없음</td><td><strong>정렬 순서 유지</strong></td></tr>
+<tr><td>범위 검색, 최솟값·최댓값</td><td>불가 (전체 순회)</td><td>가능</td></tr>
+<tr><td>예</td><td><code>HashMap</code>, <code>dict</code>, <code>unordered_map</code></td><td><code>TreeMap</code>, <code>std::map</code></td></tr>
+</tbody></table></div>
+<blockquote>
+<p>DB 인덱스가 해시가 아니라 <strong>B+ 트리</strong>인 이유가 여기 있다. 범위 검색과 정렬이 필요하기 때문이다.</p>
+</blockquote>
+<hr />
+<h2 id="6-4-tree">6-4. 트리 · 이진 탐색 트리 <span class="badge badge-fire">🔥</span> <span class="badge badge-pencil">✍️</span></h2>
+<h3 id="ds-t1">용어</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>용어</th><th>뜻</th></tr></thead>
+<tbody>
+<tr><td>차수 (Degree)</td><td>한 노드의 자식 수. 트리의 차수는 그 최댓값</td></tr>
+<tr><td>깊이 / 레벨</td><td>루트에서 그 노드까지의 간선 수</td></tr>
+<tr><td>높이</td><td>그 노드에서 가장 먼 잎까지의 간선 수</td></tr>
+<tr><td>포화 이진 트리</td><td>모든 레벨이 꽉 참. 높이 h → 노드 2^(h+1) − 1 개</td></tr>
+<tr><td>완전 이진 트리</td><td>마지막 레벨을 뺀 모든 레벨이 꽉 차고, 마지막은 <strong>왼쪽부터</strong> 채움 (힙의 모양)</td></tr>
+</tbody></table></div>
+<ul>
+<li>노드가 n 개인 트리의 간선은 <strong>n − 1</strong> 개.</li>
+<li>이진 트리에서 잎 노드 수 = 차수 2 인 노드 수 + 1.</li>
+</ul>
+<h3 id="tree-traversal">순회</h3>
+<pre><code>        A
+      /   \
+     B     C
+    / \     \
+   D   E     F
+</code></pre>
+<div class="table-wrap"><table>
+<thead><tr><th>순회</th><th>순서</th><th>결과</th><th>쓰임</th></tr></thead>
+<tbody>
+<tr><td>전위 (Preorder)</td><td><strong>루트</strong> → 왼쪽 → 오른쪽</td><td>A B D E C F</td><td>트리 복사, 직렬화</td></tr>
+<tr><td>중위 (Inorder)</td><td>왼쪽 → <strong>루트</strong> → 오른쪽</td><td>D B E A C F</td><td>BST 를 <strong>정렬 순서</strong>로 출력</td></tr>
+<tr><td>후위 (Postorder)</td><td>왼쪽 → 오른쪽 → <strong>루트</strong></td><td>D E B F C A</td><td>삭제, 후위식 계산, 디렉터리 용량</td></tr>
+<tr><td>레벨 순서</td><td>위에서 아래, 왼쪽에서 오른쪽 (큐)</td><td>A B C D E F</td><td>BFS</td></tr>
+</tbody></table></div>
+<ul>
+<li><strong>전위 + 중위</strong> 또는 <strong>후위 + 중위</strong> 가 주어지면 트리를 유일하게 복원할 수 있다. 전위의 첫 원소(또는 후위의 마지막)가 루트이고, 중위에서 그 위치를 기준으로 왼쪽·오른쪽 서브트리가 갈린다. 전위 + 후위만으로는 유일하지 않다.</li>
+</ul>
+<h3 id="bst">이진 탐색 트리 (BST)</h3>
+<p><strong>왼쪽 서브트리의 모든 키 &lt; 노드의 키 &lt; 오른쪽 서브트리의 모든 키</strong></p>
+<div class="table-wrap"><table>
+<thead><tr><th>연산</th><th>평균</th><th>최악 (편향)</th></tr></thead>
+<tbody>
+<tr><td>탐색·삽입·삭제</td><td>O(log n)</td><td><strong>O(n)</strong></td></tr>
+</tbody></table></div>
+<p><strong>삭제의 세 경우</strong></p>
+<ol>
+<li>잎 노드 → 그냥 제거</li>
+<li>자식 1개 → 자식을 그 자리로 올림</li>
+<li>자식 2개 → <strong>중위 후속자</strong>(오른쪽 서브트리의 최솟값) 또는 중위 선행자(왼쪽 서브트리의 최댓값)를 그 자리에 복사하고, 그 후속자를 삭제</li>
+</ol>
+<ul>
+<li>정렬된 순서(1, 2, 3, 4…)로 삽입하면 한쪽으로만 뻗어 <strong>연결 리스트와 같아진다</strong>. → 균형 트리가 필요한 이유.</li>
+</ul>
+<hr />
+<h2 id="6-5-balanced">6-5. 균형 트리 — AVL · Red-Black · B/B+ <span class="badge badge-star">⭐</span></h2>
+<h3 id="avl">AVL 트리</h3>
+<p>모든 노드에서 <strong>왼쪽·오른쪽 서브트리의 높이 차이가 1 이하</strong>. 깨지면 <strong>회전</strong>으로 복구한다.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>불균형 유형</th><th>삽입 위치</th><th>해결</th></tr></thead>
+<tbody>
+<tr><td>LL</td><td>왼쪽 자식의 왼쪽</td><td>오른쪽 회전 1번</td></tr>
+<tr><td>RR</td><td>오른쪽 자식의 오른쪽</td><td>왼쪽 회전 1번</td></tr>
+<tr><td>LR</td><td>왼쪽 자식의 오른쪽</td><td>왼쪽 회전 → 오른쪽 회전</td></tr>
+<tr><td>RL</td><td>오른쪽 자식의 왼쪽</td><td>오른쪽 회전 → 왼쪽 회전</td></tr>
+</tbody></table></div>
+<pre><code>LL 불균형 (30, 20, 10 순서 삽입)      오른쪽 회전 후
+      30                                20
+     /                                 /  \
+    20                ───▶           10    30
+   /
+  10
+</code></pre>
+<h3 id="red-black">레드-블랙 트리</h3>
+<ol>
+<li>모든 노드는 빨강 또는 검정</li>
+<li>루트는 검정</li>
+<li>모든 잎(NIL)은 검정</li>
+<li><strong>빨강 노드의 자식은 모두 검정</strong> (빨강이 연속될 수 없음)</li>
+<li>어떤 노드에서 그 아래 잎까지 가는 모든 경로의 <strong>검정 노드 수가 같다</strong></li>
+</ol>
+<p>→ 가장 긴 경로가 가장 짧은 경로의 <strong>2배를 넘지 않는다</strong>.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>구분</th><th>AVL</th><th>레드-블랙</th></tr></thead>
+<tbody>
+<tr><td>균형</td><td>엄격</td><td>느슨</td></tr>
+<tr><td>탐색</td><td>조금 더 빠름</td><td>조금 느림</td></tr>
+<tr><td>삽입·삭제</td><td>회전이 잦음</td><td><strong>회전이 적음</strong> (삽입 최대 2회, 삭제 최대 3회)</td></tr>
+<tr><td>쓰임</td><td>조회 위주</td><td>삽입·삭제가 잦은 범용 — Java <code>TreeMap</code>, C++ <code>std::map</code>, 리눅스 스케줄러(CFS)</td></tr>
+</tbody></table></div>
+<h3 id="b-tree-bplus">B 트리 · B+ 트리</h3>
+<p>디스크는 블록 단위로 읽고, 한 번의 접근이 메모리보다 매우 느리다. → <strong>한 노드에 키를 많이 담아 트리 높이를 낮춘다.</strong></p>
+<p>차수 m 인 B 트리: 노드당 자식 최대 m 개, 키 최대 m−1 개, 루트를 뺀 노드는 자식 최소 ⌈m/2⌉ 개, <strong>모든 잎이 같은 깊이</strong>.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>구분</th><th>B 트리</th><th>B+ 트리</th></tr></thead>
+<tbody>
+<tr><td>데이터 위치</td><td>모든 노드</td><td><strong>잎 노드에만</strong> (내부 노드는 키만)</td></tr>
+<tr><td>잎 노드 연결</td><td>없음</td><td><strong>연결 리스트로 연결</strong></td></tr>
+<tr><td>범위 검색</td><td>트리를 오르내려야 함</td><td>잎을 따라 <strong>순차 스캔</strong></td></tr>
+<tr><td>내부 노드의 분기 수</td><td>적음 (데이터도 담으므로)</td><td><strong>많음</strong> → 트리가 더 낮음</td></tr>
+<tr><td>탐색 시간</td><td>위쪽에서 일찍 끝날 수 있음</td><td>항상 잎까지 (일정)</td></tr>
+</tbody></table></div>
+<div class="calc-ex">
+<p><strong>예제.</strong> 노드 하나에 키가 100개 들어가는 B+ 트리의 높이가 3 일 때 색인할 수 있는 레코드 수는 대략 얼마인가?</p>
+<details><summary>풀이</summary>
+<p>분기 수가 약 100 이므로 100 × 100 × 100 = <strong>약 100만 건</strong>. 높이 4 면 약 1억 건. 수억 건의 테이블도 디스크를 3~4번만 읽으면 원하는 행에 닿는다. 상위 노드는 대부분 메모리에 캐시되어 있으므로 실제 디스크 접근은 더 적다.</p>
+</details>
+</div>
+<ul>
+<li>B 트리의 삽입·분할 과정은 → <a href="#b-tree-insert">B-Tree 삽입 · 분할</a></li>
+</ul>
+<hr />
+<h2 id="6-6-heap">6-6. 힙 · 우선순위 큐 <span class="badge badge-fire">🔥</span> <span class="badge badge-pencil">✍️</span></h2>
+<p><strong>완전 이진 트리</strong> + <strong>부모가 자식보다 항상 크다(최대 힙) / 작다(최소 힙)</strong>. 형제 사이에는 순서가 없다.</p>
+<h3 id="heap-array">배열 표현</h3>
+<p>완전 이진 트리이므로 빈칸 없이 배열에 담는다. 인덱스가 0 부터일 때:</p>
+<ul>
+<li>부모: <code>(i − 1) / 2</code>, 왼쪽 자식: <code>2i + 1</code>, 오른쪽 자식: <code>2i + 2</code></li>
+<li>(인덱스가 1 부터면 부모 <code>i / 2</code>, 자식 <code>2i</code>, <code>2i + 1</code>)</li>
+</ul>
+<div class="table-wrap"><table>
+<thead><tr><th>연산</th><th>방법</th><th>시간</th></tr></thead>
+<tbody>
+<tr><td>삽입</td><td>맨 끝에 넣고 부모와 비교하며 <strong>위로</strong> (sift-up)</td><td>O(log n)</td></tr>
+<tr><td>최댓값/최솟값 삭제</td><td>루트를 꺼내고 <strong>마지막 원소를 루트로</strong> 옮긴 뒤 <strong>아래로</strong> (sift-down)</td><td>O(log n)</td></tr>
+<tr><td>최댓값/최솟값 조회</td><td>루트</td><td>O(1)</td></tr>
+<tr><td>배열 → 힙 구성</td><td>마지막 내부 노드부터 거꾸로 sift-down</td><td><strong>O(n)</strong></td></tr>
+<tr><td>임의 값 탐색</td><td>순서가 약해 전체 탐색</td><td>O(n)</td></tr>
+</tbody></table></div>
+<div class="calc-ex">
+<p><strong>예제.</strong> 최대 힙 <code>[90, 70, 80, 30, 60, 50]</code> 에 85 를 삽입한 뒤, 최댓값을 삭제한 결과는?</p>
+<details><summary>풀이</summary>
+<p><strong>삽입</strong>: 끝에 85 → <code>[90, 70, 80, 30, 60, 50, 85]</code>. 85(인덱스 6)의 부모는 인덱스 2 의 80 → 교환 → <code>[90, 70, 85, 30, 60, 50, 80]</code>. 부모 90 &gt; 85 이므로 멈춤.</p>
+<p><strong>삭제</strong>: 루트 90 을 꺼내고 마지막 원소 80 을 루트로 → <code>[80, 70, 85, 30, 60, 50]</code>. 자식 70, 85 중 큰 85 와 교환 → <code>[85, 70, 80, 30, 60, 50]</code>. 80 의 자식은 50 뿐이고 80 &gt; 50 이므로 멈춤.</p>
+<p>결과: <strong><code>[85, 70, 80, 30, 60, 50]</code></strong></p>
+</details>
+</div>
+<ul>
+<li><strong>힙 구성이 O(n) 인 이유</strong>: 아래쪽 노드일수록 수는 많지만 내려갈 거리가 짧다. 높이 h 인 노드가 n/2^(h+1) 개이고 각각 h 만큼만 내려가므로 합이 O(n) 이다.</li>
+<li><strong>힙 정렬</strong>: 힙 구성 O(n) + 최댓값 삭제 n 번 O(n log n). 제자리 정렬, 불안정 정렬.</li>
+</ul>
+<h3 id="heap-usage">활용</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>문제</th><th>방법</th></tr></thead>
+<tbody>
+<tr><td>상위 K 개</td><td>크기 K 인 <strong>최소 힙</strong> 유지 → O(n log K)</td></tr>
+<tr><td>스트림의 중앙값</td><td>최대 힙(작은 절반) + 최소 힙(큰 절반)</td></tr>
+<tr><td>다익스트라, 프림</td><td>최소 힙으로 가장 가까운 정점 선택</td></tr>
+<tr><td>작업 스케줄링, 타이머</td><td>우선순위·만료 시각 기준 힙</td></tr>
+<tr><td>K 개의 정렬된 리스트 병합</td><td>각 리스트의 머리를 힙에 넣고 반복</td></tr>
+</tbody></table></div>
+<hr />
+<h2 id="6-7-graph">6-7. 그래프 표현 <span class="badge badge-star">⭐</span></h2>
+<div class="table-wrap"><table>
+<thead><tr><th>구분</th><th>인접 행렬</th><th>인접 리스트</th></tr></thead>
+<tbody>
+<tr><td>공간</td><td>O(V²)</td><td><strong>O(V + E)</strong></td></tr>
+<tr><td>두 정점의 연결 확인</td><td><strong>O(1)</strong></td><td>O(차수)</td></tr>
+<tr><td>한 정점의 이웃 순회</td><td>O(V)</td><td><strong>O(차수)</strong></td></tr>
+<tr><td>전체 순회 (BFS/DFS)</td><td>O(V²)</td><td>O(V + E)</td></tr>
+<tr><td>적합</td><td>간선이 많은 <strong>밀집 그래프</strong>, 플로이드-워셜</td><td>간선이 적은 <strong>희소 그래프</strong> (대부분의 실제 그래프)</td></tr>
+</tbody></table></div>
+<div class="table-wrap"><table>
+<thead><tr><th>용어</th><th>뜻</th></tr></thead>
+<tbody>
+<tr><td>차수</td><td>정점에 붙은 간선 수. 방향 그래프는 진입 차수 / 진출 차수</td></tr>
+<tr><td>무방향 그래프의 차수 합</td><td><strong>2E</strong> (악수 정리)</td></tr>
+<tr><td>완전 그래프</td><td>모든 정점 쌍이 연결. 간선 n(n−1)/2 개</td></tr>
+<tr><td>연결 그래프</td><td>모든 정점 쌍 사이에 경로 존재</td></tr>
+<tr><td>신장 트리</td><td>모든 정점을 포함하는 트리. 간선 V − 1 개</td></tr>
+<tr><td>DAG</td><td>방향 비순환 그래프. 위상 정렬 가능</td></tr>
+<tr><td>이분 그래프</td><td>정점을 두 집합으로 나눠 같은 집합 안에는 간선이 없음. 2색 칠하기로 판별</td></tr>
+</tbody></table></div>
+<ul>
+<li>트리는 <strong>사이클이 없는 연결 그래프</strong>다.</li>
+<li>탐색과 최단 경로 알고리즘은 → <a href="#5-4">그래프 알고리즘</a></li>
+</ul>
+<hr />
+<h2 id="6-8-advanced">6-8. 트라이 · 블룸 필터 · LRU 캐시 <span class="badge badge-star">⭐</span></h2>
+<h3 id="trie">트라이 (Trie)</h3>
+<p>문자열을 <strong>한 글자씩 간선으로</strong> 저장하는 트리. 공통 접두사를 공유한다.</p>
+<pre><code>          (root)
+         /      \
+        c        d
+        |        |
+        a        o
+       / \       |
+      t   r      g*
+      *   *
+</code></pre>
+<ul>
+<li>길이 M 인 문자열의 삽입·검색이 <strong>O(M)</strong> — 저장된 문자열 수와 무관.</li>
+<li>용도: 자동 완성, 사전, 접두사 검색, IP 라우팅 테이블의 <strong>최장 접두사 일치</strong>.</li>
+<li>단점: 노드마다 자식 포인터 배열을 두면 메모리를 많이 쓴다.</li>
+</ul>
+<h3 id="bloom-filter">블룸 필터 (Bloom Filter)</h3>
+<p>원소가 집합에 <strong>있는지</strong>를 아주 적은 메모리로 판정하는 확률적 자료구조. 비트 배열 하나와 해시 함수 k 개를 쓴다.</p>
+<ul>
+<li>삽입: k 개 해시 위치의 비트를 1 로 설정.</li>
+<li>조회: k 개 위치가 <strong>모두 1</strong> 이면 "있을 수도 있다", <strong>하나라도 0</strong> 이면 "확실히 없다".</li>
+</ul>
+<div class="table-wrap"><table>
+<thead><tr><th>성질</th><th>내용</th></tr></thead>
+<tbody>
+<tr><td>거짓 양성</td><td>있음 (없는데 있다고 답할 수 있음)</td></tr>
+<tr><td>거짓 음성</td><td><strong>없음</strong> (있는데 없다고 답하지 않음)</td></tr>
+<tr><td>삭제</td><td>불가 (계수 블룸 필터로 보완)</td></tr>
+</tbody></table></div>
+<ul>
+<li>용도: DB·캐시에 <strong>없는 키를 조회하러 가는 비용을 미리 차단</strong>(LSM 트리의 SSTable, 캐시 관통 방지), 중복 URL 검사.</li>
+</ul>
+<h3 id="lru-cache">LRU 캐시 구현</h3>
+<p>"가장 오래 쓰지 않은 것을 버린다"를 <strong>조회·삽입 모두 O(1)</strong> 로 구현하라는 단골 문제.</p>
+<p><strong>해시 맵 + 이중 연결 리스트</strong></p>
+<ul>
+<li>해시 맵: 키 → 리스트 노드 (O(1) 조회)</li>
+<li>이중 연결 리스트: 사용 순서 유지. 접근하면 노드를 <strong>맨 앞으로</strong> 옮기고, 용량을 넘으면 <strong>맨 뒤</strong>를 제거 (O(1))</li>
+</ul>
+<pre><code class="language-java">class LRUCache&lt;K, V&gt; extends LinkedHashMap&lt;K, V&gt; {
+    private final int capacity;
+
+    LRUCache(int capacity) {
+        super(16, 0.75f, true);        // accessOrder = true
+        this.capacity = capacity;
+    }
+
+    @Override
+    protected boolean removeEldestEntry(Map.Entry&lt;K, V&gt; eldest) {
+        return size() &gt; capacity;
+    }
+}
+</code></pre>
+<h3 id="other-structures">그 밖의 구조</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>구조</th><th>한 줄 설명</th><th>쓰임</th></tr></thead>
+<tbody>
+<tr><td>세그먼트 트리</td><td>구간의 합·최솟값을 트리에 저장. 구간 질의와 점 갱신이 O(log n)</td><td>구간 합이 자주 바뀌는 문제</td></tr>
+<tr><td>펜윅 트리 (BIT)</td><td>세그먼트 트리의 간결한 형태. 누적 합 전용</td><td>누적 빈도</td></tr>
+<tr><td>스킵 리스트</td><td>여러 층의 연결 리스트로 평균 O(log n) 탐색. 구현이 단순</td><td>Redis 정렬 집합</td></tr>
+<tr><td>LSM 트리</td><td>쓰기를 메모리에 모았다가 정렬된 파일로 내려쓰고 병합. <strong>쓰기에 강함</strong></td><td>Cassandra, RocksDB</td></tr>
+<tr><td>서로소 집합</td><td>→ <a href="#union-find">유니온 파인드</a></td><td>연결성 판정</td></tr>
+</tbody></table></div>
+<hr />
+<h2 id="6-9-guide">6-9. 자료구조 선택 가이드 <span class="badge badge-fire">🔥</span></h2>
+<h3 id="ds-complexity">시간 복잡도 한눈에</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>자료구조</th><th>접근</th><th>탐색</th><th>삽입</th><th>삭제</th><th>비고</th></tr></thead>
+<tbody>
+<tr><td>배열</td><td>O(1)</td><td>O(n)</td><td>O(n)</td><td>O(n)</td><td>정렬되어 있으면 탐색 O(log n)</td></tr>
+<tr><td>동적 배열 (끝)</td><td>O(1)</td><td>O(n)</td><td>분할 상환 O(1)</td><td>O(1)</td><td></td></tr>
+<tr><td>연결 리스트</td><td>O(n)</td><td>O(n)</td><td>O(1)*</td><td>O(1)*</td><td>*위치를 알 때</td></tr>
+<tr><td>스택 / 큐</td><td>—</td><td>O(n)</td><td>O(1)</td><td>O(1)</td><td></td></tr>
+<tr><td>해시 테이블</td><td>—</td><td>O(1)</td><td>O(1)</td><td>O(1)</td><td>평균. 최악 O(n)</td></tr>
+<tr><td>이진 탐색 트리</td><td>—</td><td>O(log n)</td><td>O(log n)</td><td>O(log n)</td><td>평균. 편향 시 O(n)</td></tr>
+<tr><td>균형 트리 (AVL, RB)</td><td>—</td><td>O(log n)</td><td>O(log n)</td><td>O(log n)</td><td>최악 보장</td></tr>
+<tr><td>B / B+ 트리</td><td>—</td><td>O(log n)</td><td>O(log n)</td><td>O(log n)</td><td>디스크 기반</td></tr>
+<tr><td>힙</td><td>—</td><td>O(n)</td><td>O(log n)</td><td>O(log n)</td><td>최댓값·최솟값 조회 O(1)</td></tr>
+<tr><td>트라이</td><td>—</td><td>O(M)</td><td>O(M)</td><td>O(M)</td><td>M = 문자열 길이</td></tr>
+</tbody></table></div>
+<h3 id="ds-choice">요구 사항 → 자료구조</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>필요한 것</th><th>선택</th></tr></thead>
+<tbody>
+<tr><td>키로 빠르게 조회</td><td>해시 테이블</td></tr>
+<tr><td>정렬 순서 유지 + 범위 검색</td><td>균형 트리 (메모리), B+ 트리 (디스크)</td></tr>
+<tr><td>최댓값·최솟값만 반복해서 꺼냄</td><td>힙</td></tr>
+<tr><td>최근 것부터 처리 / 되돌리기</td><td>스택</td></tr>
+<tr><td>들어온 순서대로 처리</td><td>큐</td></tr>
+<tr><td>중복 제거, 포함 여부</td><td>해시 집합</td></tr>
+<tr><td>접두사 검색</td><td>트라이</td></tr>
+<tr><td>대용량에서 "없음"을 빠르게 판정</td><td>블룸 필터</td></tr>
+<tr><td>그룹 병합과 같은 그룹 판정</td><td>유니온 파인드</td></tr>
+</tbody></table></div>
+<h3 id="ds-by-language">언어별 대응</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>자료구조</th><th>Java</th><th>Python</th><th>C++</th></tr></thead>
+<tbody>
+<tr><td>동적 배열</td><td><code>ArrayList</code></td><td><code>list</code></td><td><code>vector</code></td></tr>
+<tr><td>연결 리스트 / 덱</td><td><code>LinkedList</code>, <code>ArrayDeque</code></td><td><code>collections.deque</code></td><td><code>list</code>, <code>deque</code></td></tr>
+<tr><td>해시 맵</td><td><code>HashMap</code></td><td><code>dict</code></td><td><code>unordered_map</code></td></tr>
+<tr><td>정렬 맵</td><td><code>TreeMap</code></td><td>(표준에 없음)</td><td><code>map</code></td></tr>
+<tr><td>해시 집합</td><td><code>HashSet</code></td><td><code>set</code></td><td><code>unordered_set</code></td></tr>
+<tr><td>힙</td><td><code>PriorityQueue</code> (최소 힙)</td><td><code>heapq</code> (최소 힙)</td><td><code>priority_queue</code> (최대 힙)</td></tr>
+<tr><td>스레드 안전 맵</td><td><code>ConcurrentHashMap</code></td><td>—</td><td>—</td></tr>
+</tbody></table></div>
+<ul>
+<li>Java 에서 스택은 <code>Stack</code>(동기화된 레거시)보다 <code>ArrayDeque</code> 를 쓴다.</li>
+<li>Python <code>list.pop(0)</code> 은 O(n) 이다. 큐는 <code>deque.popleft()</code> 를 쓴다.</li>
+</ul>
+</div>

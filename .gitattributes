@@ -1,0 +1,4 @@
+src/main/resources/templates/notes/** linguist-documentation
+mvnw linguist-vendored
+mvnw.cmd linguist-vendored
+mvnw text eol=lf
